@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { Camera, CheckCircle, AlertCircle, Loader2, Trash2, MessageSquare, ChevronDown, ChevronUp, Download, Lock, Unlock } from 'lucide-react';
+import { Camera, CheckCircle, AlertCircle, Loader2, Trash2, MessageSquare, ChevronDown, ChevronUp, Download, Lock, Unlock, ZoomIn } from 'lucide-react';
 
 interface MenuItem {
   id: number;
@@ -36,6 +36,7 @@ export default function LunchOrderApp() {
   const [successMessage, setSuccessMessage] = useState('');
   const [editingMenu, setEditingMenu] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
+  const [showImageModal, setShowImageModal] = useState(false);
 
   // Načtení dat při startu
   useEffect(() => {
@@ -100,7 +101,23 @@ export default function LunchOrderApp() {
                   },
                   {
                     type: 'text',
-                    text: 'Toto je fotka menu z restaurace. Prosím rozpoznej všechna jídla a vrať mi je jako JSON array. Každé jídlo by mělo mít strukturu: {"name": "název jídla", "description": "krátký popis pokud je vidět"}. Vrať POUZE validní JSON array, nic jiného. Pokud je to denní menu s číslovanými položkami (Menu 1, Menu 2...), zahrň číslo do názvu.'
+                    text: `Extract ALL menu items from this restaurant menu image. 
+
+IMPORTANT INSTRUCTIONS:
+- Read ALL visible text carefully
+- Include menu numbers (Menu 1, Menu 2, etc.) if present
+- Include food names, ingredients, and prices
+- For Czech menus: capture complete dish descriptions including side dishes
+- Return ONLY a valid JSON array, nothing else
+- Each item format: {"name": "complete dish name with all details"}
+
+Example output:
+[
+  {"name": "Menu 1 - Hovězí vývař, nudle, kuřecí řízek, bramborová kaše (140 Kč)"},
+  {"name": "Menu 2 - Polévka, hlavní jídlo, příloha (cena)"}
+]
+
+DO NOT include any markdown formatting, explanations, or text outside the JSON array.`
                   }
                 ]
               }],
@@ -124,15 +141,23 @@ export default function LunchOrderApp() {
 
           setMenuItems(formattedItems);
           setEditingMenu(true);
-        } catch (apiError) {
-          console.error('API Error:', apiError);
+        } catch (apiError: any) {
+          console.error('API Error Details:', {
+            error: apiError,
+            message: apiError?.message,
+            status: apiError?.status
+          });
+          
+          // Zobrazení detailnější chybové zprávy
+          const errorMsg = apiError?.message || 'Neznámá chyba';
+          setError(`AI rozpoznání selhalo: ${errorMsg}. Upravte prosím menu ručně.`);
+          
           setMenuItems([
             { id: Date.now() + 1, name: 'Menu 1', description: 'Vyplňte název jídla' },
             { id: Date.now() + 2, name: 'Menu 2', description: 'Vyplňte název jídla' },
             { id: Date.now() + 3, name: 'Menu 3', description: 'Vyplňte název jídla' }
           ]);
           setEditingMenu(true);
-          setError('Automatické rozpoznání selhalo. Prosím upravte menu ručně.');
         }
       };
       reader.readAsDataURL(file);
@@ -446,6 +471,31 @@ export default function LunchOrderApp() {
     );
   };
 
+  const ImageModal = () => {
+    if (!showImageModal || !menuImage) return null;
+
+    return (
+      <div 
+        className="fixed inset-0 bg-black bg-opacity-95 flex items-center justify-center z-50 p-4 cursor-zoom-out"
+        onClick={() => setShowImageModal(false)}
+      >
+        <button
+          onClick={() => setShowImageModal(false)}
+          className="absolute top-4 right-4 w-12 h-12 bg-white rounded-full flex items-center justify-center hover:bg-gray-100 transition-colors shadow-lg z-10"
+          aria-label="Zavřít"
+        >
+          <span className="text-gray-800 text-3xl font-bold leading-none">×</span>
+        </button>
+        <img 
+          src={menuImage} 
+          alt="Menu - zvětšený náhled" 
+          className="max-w-full max-h-full object-contain animate-scale-in"
+          onClick={(e) => e.stopPropagation()}
+        />
+      </div>
+    );
+  };
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 py-8 px-4">
       <div className="max-w-5xl mx-auto space-y-6">
@@ -479,6 +529,7 @@ export default function LunchOrderApp() {
         )}
 
         <SuccessModal />
+        <ImageModal />
 
         {/* ADMIN SECTION */}
         <div className="bg-white rounded-lg shadow-lg p-6">
@@ -527,8 +578,24 @@ export default function LunchOrderApp() {
               ) : (
                 <>
                   {menuImage && (
-                    <div className="mb-4 p-4 bg-gray-50 rounded-lg">
-                      <img src={menuImage} alt="Menu" className="max-w-full h-auto rounded-lg shadow-md mx-auto" style={{ maxHeight: '200px' }} />
+                    <div className="mb-4 p-4 bg-gray-50 rounded-lg relative">
+                      <div className="relative inline-block mx-auto">
+                        <img 
+                          src={menuImage} 
+                          alt="Menu" 
+                          className="max-w-full h-auto rounded-lg shadow-md cursor-pointer hover:opacity-90 transition-opacity" 
+                          style={{ maxHeight: '200px' }}
+                          onClick={() => setShowImageModal(true)}
+                        />
+                        <button
+                          onClick={() => setShowImageModal(true)}
+                          className="absolute top-2 right-2 bg-white bg-opacity-90 hover:bg-opacity-100 p-2 rounded-full shadow-lg transition-all"
+                          title="Zvětšit obrázek"
+                        >
+                          <ZoomIn size={20} className="text-indigo-600" />
+                        </button>
+                      </div>
+                      <p className="text-center text-sm text-gray-500 mt-2">Klikněte na obrázek pro zvětšení</p>
                     </div>
                   )}
 
@@ -585,8 +652,24 @@ export default function LunchOrderApp() {
             <h2 className="text-2xl font-bold text-gray-800 mb-4">Objednávka</h2>
 
             {menuImage && (
-              <div className="mb-4 p-4 bg-gray-50 rounded-lg">
-                <img src={menuImage} alt="Menu" className="max-w-full h-auto rounded-lg shadow-md mx-auto" style={{ maxHeight: '200px' }} />
+              <div className="mb-4 p-4 bg-gray-50 rounded-lg relative">
+                <div className="relative inline-block mx-auto">
+                  <img 
+                    src={menuImage} 
+                    alt="Menu" 
+                    className="max-w-full h-auto rounded-lg shadow-md cursor-pointer hover:opacity-90 transition-opacity" 
+                    style={{ maxHeight: '200px' }}
+                    onClick={() => setShowImageModal(true)}
+                  />
+                  <button
+                    onClick={() => setShowImageModal(true)}
+                    className="absolute top-2 right-2 bg-white bg-opacity-90 hover:bg-opacity-100 p-2 rounded-full shadow-lg transition-all"
+                    title="Zvětšit obrázek"
+                  >
+                    <ZoomIn size={20} className="text-indigo-600" />
+                  </button>
+                </div>
+                <p className="text-center text-sm text-gray-500 mt-2">Klikněte na obrázek pro zvětšení</p>
               </div>
             )}
 

@@ -80,59 +80,26 @@ export default function LunchOrderApp() {
         setMenuImage(imageDataUrl || null);
 
         try {
-          const response = await fetch('https://api.anthropic.com/v1/messages', {
+          // Volání našeho backend API endpointu (žádný CORS problém!)
+          const response = await fetch('/api/recognize', {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',
             },
             body: JSON.stringify({
-              model: 'claude-sonnet-4-20250514',
-              max_tokens: 1024,
-              messages: [{
-                role: 'user',
-                content: [
-                  {
-                    type: 'image',
-                    source: {
-                      type: 'base64',
-                      media_type: file.type,
-                      data: base64Image
-                    }
-                  },
-                  {
-                    type: 'text',
-                    text: `Extract ALL menu items from this restaurant menu image. 
-
-IMPORTANT INSTRUCTIONS:
-- Read ALL visible text carefully
-- Include menu numbers (Menu 1, Menu 2, etc.) if present
-- Include food names, ingredients, and prices
-- For Czech menus: capture complete dish descriptions including side dishes
-- Return ONLY a valid JSON array, nothing else
-- Each item format: {"name": "complete dish name with all details"}
-
-Example output:
-[
-  {"name": "Menu 1 - Hovězí vývař, nudle, kuřecí řízek, bramborová kaše (140 Kč)"},
-  {"name": "Menu 2 - Polévka, hlavní jídlo, příloha (cena)"}
-]
-
-DO NOT include any markdown formatting, explanations, or text outside the JSON array.`
-                  }
-                ]
-              }],
+              image: base64Image,
+              mediaType: file.type
             })
           });
 
           if (!response.ok) {
-            throw new Error('Chyba při rozpoznávání menu');
+            const errorData = await response.json();
+            throw new Error(errorData.error || 'Chyba při rozpoznávání menu');
           }
 
           const data = await response.json();
-          let responseText = data.content[0].text;
-          responseText = responseText.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
+          const recognizedItems = data.menuItems;
           
-          const recognizedItems = JSON.parse(responseText);
           const formattedItems = recognizedItems.map((item: any, index: number) => ({
             id: Date.now() + index,
             name: item.name,
@@ -141,6 +108,7 @@ DO NOT include any markdown formatting, explanations, or text outside the JSON a
 
           setMenuItems(formattedItems);
           setEditingMenu(true);
+          setError(''); // Vyčištění chyby po úspěchu
         } catch (apiError: any) {
           console.error('API Error Details:', {
             error: apiError,
@@ -158,6 +126,7 @@ DO NOT include any markdown formatting, explanations, or text outside the JSON a
             { id: Date.now() + 3, name: 'Menu 3', description: 'Vyplňte název jídla' }
           ]);
           setEditingMenu(true);
+        }
         }
       };
       reader.readAsDataURL(file);

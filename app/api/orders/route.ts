@@ -2,7 +2,7 @@ import { kv } from '@vercel/kv';
 import { NextResponse } from 'next/server';
 
 const ORDERS_KEY = 'lunch:orders';
-const TTL_SECONDS = 3 * 24 * 60 * 60; // 3 dny
+const TTL_SECONDS = 5 * 24 * 60 * 60; // 5 dní
 
 export async function GET() {
   try {

@@ -76,75 +76,44 @@ const LunchOrderApp = () => {
   };
 
   const recognizeMenu = async () => {
-    if (!menuImage) {
-      setError('Nejprve nahrajte obrázek menu');
-      return;
+  if (!menuImage) {
+    setError('Nejprve nahrajte obrázek menu');
+    return;
+  }
+
+  setIsProcessing(true);
+  setError('');
+
+  try {
+    const response = await fetch('/api/recognize', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        image: menuImage
+      })
+    });
+
+    if (!response.ok) {
+      throw new Error('Failed to recognize menu');
     }
 
-    setIsProcessing(true);
-    setError('');
-
-    try {
-      const response = await fetch('https://api.anthropic.com/v1/messages', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          model: 'claude-sonnet-4-20250514',
-          max_tokens: 2000,
-          messages: [{
-            role: 'user',
-            content: [
-              {
-                type: 'image',
-                source: {
-                  type: 'base64',
-                  media_type: 'image/jpeg',
-                  data: menuImage.split(',')[1]
-                }
-              },
-              {
-                type: 'text',
-                text: `Analyzuj toto menu a vrať JSON seznam jídel. 
-
-DŮLEŽITÉ: Odpověz POUZE validním JSON objektem, žádný jiný text.
-
-Formát:
-{
-  "items": [
-    {"name": "Název jídla", "price": "Cena"},
-    {"name": "Název jídla 2", "price": "Cena"}
-  ]
-}
-
-Pravidla:
-- Pouze JSON, žádné markdown, žádné backticky
-- Zahrň všechna hlavní jídla
-- Ceny ve formátu "120 Kč" nebo "150,-"
-- Pokud cena není uvedena, dej prázdný string`
-              }
-            ]
-          }]
-        })
-      });
-
-      const data = await response.json();
-      let responseText = data.content[0].text;
-      
-      // Clean up response
-      responseText = responseText.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
-      
-      const menuData = JSON.parse(responseText);
-      setMenuItems(menuData.items || []);
-      
-    } catch (err) {
-      console.error('Error:', err);
-      setError('Chyba při rozpoznávání menu. Zkuste to prosím znovu nebo přidejte jídla ručně.');
-    } finally {
-      setIsProcessing(false);
+    const data = await response.json();
+    
+    if (data.error) {
+      throw new Error(data.error);
     }
-  };
+    
+    setMenuItems(data.items || []);
+    
+  } catch (err) {
+    console.error('Error:', err);
+    setError('Chyba při rozpoznávání menu. Zkuste to prosím znovu nebo přidejte jídla ručně.');
+  } finally {
+    setIsProcessing(false);
+  }
+};
 
   const addMenuItem = () => {
     setMenuItems([...menuItems, { name: '', price: '' }]);

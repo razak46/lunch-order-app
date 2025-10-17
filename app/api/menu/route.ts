@@ -3,7 +3,7 @@ import { NextResponse } from 'next/server';
 
 const MENU_KEY = 'lunch:menu';
 const MENU_IMAGE_KEY = 'lunch:menu:image';
-const TTL_SECONDS = 3 * 24 * 60 * 60; // 3 dny
+const TTL_SECONDS = 5 * 24 * 60 * 60; // 5 dní
 
 export async function GET() {
   try {

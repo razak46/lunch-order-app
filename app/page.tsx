@@ -126,7 +126,7 @@ export default function LunchOrderApp() {
             { id: Date.now() + 3, name: 'Menu 3', description: 'Vyplňte název jídla' }
           ]);
           setEditingMenu(true);
-        }
+      
         }
       };
       reader.readAsDataURL(file);

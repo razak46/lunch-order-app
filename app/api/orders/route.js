@@ -1,7 +1,7 @@
 import { createClient } from 'redis';
 import { NextResponse } from 'next/server';
 
-const TTL_SECONDS = 5 * 24 * 60 * 60; // 5 days
+const TTL_SECONDS = 5 * 24 * 60 * 60;
 
 async function getRedisClient() {
   const client = createClient({

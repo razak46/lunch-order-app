@@ -1,7 +1,7 @@
 import { createClient } from 'redis';
 import { NextResponse } from 'next/server';
 
-const TTL_SECONDS = 5 * 24 * 60 * 60; // 5 days
+const TTL_SECONDS = 5 * 24 * 60 * 60;
 
 async function getRedisClient() {
   const client = createClient({
@@ -60,4 +60,9 @@ export async function DELETE() {
     
     return NextResponse.json({ success: true });
   } catch (error) {
-    console.error('Err
+    console.error('Error deleting menu:', error);
+    return NextResponse.json({ error: 'Failed to delete menu' }, { status: 500 });
+  } finally {
+    if (client) await client.disconnect();
+  }
+}

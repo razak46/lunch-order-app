@@ -1,4 +1,4 @@
-import { kv } from '@vercel/kv';
+import { kv } from 'redis';
 import { NextResponse } from 'next/server';
 
 const TTL_SECONDS = 5 * 24 * 60 * 60; // 5 days

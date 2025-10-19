@@ -186,7 +186,16 @@ const LunchOrderApp = () => {
   const updateQuantity = (itemName, change) => {
     setQuantities(prev => {
       const currentQty = prev[itemName] || 1;
-      const newQty = Math.max(1, Math.min(99, currentQty + change));
+      const newQty = Math.max(0, Math.min(99, currentQty + change));
+      
+      // If quantity becomes 0, deselect the item
+      if (newQty === 0) {
+        setSelectedItems(prevSelected => ({
+          ...prevSelected,
+          [itemName]: false
+        }));
+      }
+      
       return {
         ...prev,
         [itemName]: newQty
@@ -908,6 +917,7 @@ const LunchOrderApp = () => {
                               updateQuantity(item.name, -1);
                             }}
                             className="text-orange-600 hover:text-orange-700 font-bold text-lg px-2 py-1"
+                            title={quantities[item.name] === 1 ? "Kliknutím odznačíte jídlo" : "Snížit počet"}
                           >
                             −
                           </button>

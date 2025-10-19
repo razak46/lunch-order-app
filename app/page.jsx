@@ -1078,7 +1078,7 @@ const LunchOrderApp = () => {
                 <li><strong>🍽️ Na místě</strong> - zaškrtni a nastav počet</li>
                 <li><strong>🥡 S sebou</strong> - zaškrtni a nastav počet</li>
                 <li><strong>Oboje najednou!</strong> - např. 2× na místě + 1× s sebou</li>
-                <li>Klikni na šipku ⌄ pro přidání poznámek</li>
+                
               </ul>
             </div>
           </div>

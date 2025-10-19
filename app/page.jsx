@@ -291,10 +291,16 @@ const LunchOrderApp = () => {
             
             // Přidej poznámku, pokud existuje
             if (item.note && item.note.trim()) {
-              menuData.withNotes.push({
-                quantity: item.quantity || 1,
-                note: item.note.trim()
-              });
+              // Zkontroluj, jestli už tato poznámka není v seznamu
+              const existingNote = menuData.withNotes.find(n => n.note === item.note.trim());
+              if (existingNote) {
+                existingNote.quantity += item.quantity || 1;
+              } else {
+                menuData.withNotes.push({
+                  quantity: item.quantity || 1,
+                  note: item.note.trim()
+                });
+              }
             }
           });
         });
@@ -997,16 +1003,26 @@ const LunchOrderApp = () => {
               <Eye className="w-6 h-6 text-orange-500" />
               Aktuální objednávky ({allOrders.length})
             </h2>
-            <button
-              onClick={() => setShowOrdersSection(!showOrdersSection)}
-              className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
-            >
-              {showOrdersSection ? (
-                <ChevronUp className="w-5 h-5 text-gray-500" />
-              ) : (
-                <ChevronDown className="w-5 h-5 text-gray-500" />
-              )}
-            </button>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={exportOrders}
+                disabled={allOrders.length === 0}
+                className="px-4 py-2 bg-orange-500 hover:bg-orange-600 text-white rounded-lg transition-colors flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                <Download className="w-4 h-4" />
+                Export
+              </button>
+              <button
+                onClick={() => setShowOrdersSection(!showOrdersSection)}
+                className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+              >
+                {showOrdersSection ? (
+                  <ChevronUp className="w-5 h-5 text-gray-500" />
+                ) : (
+                  <ChevronDown className="w-5 h-5 text-gray-500" />
+                )}
+              </button>
+            </div>
           </div>
           
           {showOrdersSection && (

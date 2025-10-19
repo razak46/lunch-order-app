@@ -947,7 +947,7 @@ const LunchOrderApp = () => {
                     </div>
 
                     {/* Notes section - only show when any option is selected */}
-                    {isAnySelected && expandedItems[item.name] && (
+                    {isAnySelected (
                       <div className="pt-3 border-t border-gray-200 space-y-2">
                         {isNamisteSelected && (
                           <div>

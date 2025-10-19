@@ -19,11 +19,9 @@ const LunchOrderApp = () => {
 
   // User order state
   const [userName, setUserName] = useState('');
-  const [orderType, setOrderType] = useState('namiste');
-  const [orderTypeNote, setOrderTypeNote] = useState('');
-  const [selectedItems, setSelectedItems] = useState({});
-  const [quantities, setQuantities] = useState({});
-  const [notes, setNotes] = useState({});
+  const [selectedItems, setSelectedItems] = useState({}); // { "itemName-namiste": true, "itemName-ssebou": true }
+  const [quantities, setQuantities] = useState({}); // { "itemName-namiste": 2, "itemName-ssebou": 1 }
+  const [notes, setNotes] = useState({}); // { "itemName-namiste": "note", "itemName-ssebou": "note" }
   const [orderSubmitted, setOrderSubmitted] = useState(false);
   const [expandedItems, setExpandedItems] = useState({});
 
@@ -166,39 +164,43 @@ const LunchOrderApp = () => {
     }
   };
 
-  const toggleItemSelection = (itemName) => {
+  const getItemKey = (itemName, type) => `${itemName}-${type}`;
+
+  const toggleItemSelection = (itemName, type) => {
+    const key = getItemKey(itemName, type);
     setSelectedItems(prev => {
-      const newSelected = !prev[itemName];
-      // Initialize quantity to 1 when selecting
-      if (newSelected && !quantities[itemName]) {
+      const newSelected = !prev[key];
+      // Initialize quantity when selecting
+      if (newSelected && !quantities[key]) {
         setQuantities(prevQty => ({
           ...prevQty,
-          [itemName]: 1
+          [key]: 1
         }));
       }
       return {
         ...prev,
-        [itemName]: newSelected
+        [key]: newSelected
       };
     });
   };
 
-  const updateQuantity = (itemName, change) => {
+  const updateQuantity = (itemName, type, change) => {
+    const key = getItemKey(itemName, type);
     setQuantities(prev => {
-      const currentQty = prev[itemName] || 1;
+      const currentQty = prev[key] || 1;
       const newQty = Math.max(0, Math.min(99, currentQty + change));
       
       // If quantity becomes 0, deselect the item
       if (newQty === 0) {
         setSelectedItems(prevSelected => ({
           ...prevSelected,
-          [itemName]: false
+          [key]: false
         }));
       }
       
       return {
         ...prev,
-        [itemName]: newQty
+        [key]: newQty
       };
     });
   };
@@ -223,15 +225,17 @@ const LunchOrderApp = () => {
     try {
       const orderData = {
         userName,
-        orderType,
-        orderTypeNote,
         items: Object.entries(selectedItems)
           .filter(([_, selected]) => selected)
-          .map(([itemName]) => ({
-            name: itemName,
-            quantity: quantities[itemName] || 1,
-            note: notes[itemName] || ''
-          })),
+          .map(([key]) => {
+            const [itemName, type] = key.split('-');
+            return {
+              name: itemName,
+              quantity: quantities[key] || 1,
+              type: type,
+              note: notes[key] || ''
+            };
+          }),
         timestamp: new Date().toISOString()
       };
 
@@ -267,25 +271,38 @@ const LunchOrderApp = () => {
         let exportText = '🍽️ OBJEDNÁVKY OBĚDŮ\n';
         exportText += '═══════════════════════════════════\n\n';
 
-        const namiste = data.orders.filter(o => o.orderType === 'namiste');
-        const ssebou = data.orders.filter(o => o.orderType === 'ssebou');
+        // Group items by type across all orders
+        const namiste = [];
+        const ssebou = [];
+        
+        data.orders.forEach(order => {
+          order.items.forEach(item => {
+            const entry = {
+              userName: order.userName,
+              itemName: item.name,
+              quantity: item.quantity || 1,
+              note: item.note || '',
+              timestamp: order.timestamp
+            };
+            
+            if (item.type === 'namiste') {
+              namiste.push(entry);
+            } else {
+              ssebou.push(entry);
+            }
+          });
+        });
 
         if (namiste.length > 0) {
           exportText += '🍽️ NA MÍSTĚ:\n';
           exportText += '─────────────────────────────────\n';
-          namiste.forEach(order => {
-            exportText += `\n👤 ${order.userName}`;
-            if (order.orderTypeNote) {
-              exportText += ` (${order.orderTypeNote})`;
+          namiste.forEach(entry => {
+            exportText += `\n👤 ${entry.userName}\n`;
+            exportText += `   ${entry.quantity}× ${entry.itemName}`;
+            if (entry.note) {
+              exportText += ` - ${entry.note}`;
             }
             exportText += '\n';
-            order.items.forEach(item => {
-              exportText += `   ${item.quantity || 1}× ${item.name}`;
-              if (item.note) {
-                exportText += ` - ${item.note}`;
-              }
-              exportText += '\n';
-            });
           });
           exportText += '\n';
         }
@@ -293,24 +310,20 @@ const LunchOrderApp = () => {
         if (ssebou.length > 0) {
           exportText += '🥡 S SEBOU:\n';
           exportText += '─────────────────────────────────\n';
-          ssebou.forEach(order => {
-            exportText += `\n👤 ${order.userName}`;
-            if (order.orderTypeNote) {
-              exportText += ` (${order.orderTypeNote})`;
+          ssebou.forEach(entry => {
+            exportText += `\n👤 ${entry.userName}\n`;
+            exportText += `   ${entry.quantity}× ${entry.itemName}`;
+            if (entry.note) {
+              exportText += ` - ${entry.note}`;
             }
             exportText += '\n';
-            order.items.forEach(item => {
-              exportText += `   ${item.quantity || 1}× ${item.name}`;
-              if (item.note) {
-                exportText += ` - ${item.note}`;
-              }
-              exportText += '\n';
-            });
           });
         }
 
         exportText += '\n═══════════════════════════════════\n';
         exportText += `Celkem objednávek: ${data.orders.length}\n`;
+        exportText += `Na místě: ${namiste.length} položek\n`;
+        exportText += `S sebou: ${ssebou.length} položek\n`;
         exportText += `Vygenerováno: ${new Date().toLocaleString('cs-CZ')}\n`;
 
         const blob = new Blob([exportText], { type: 'text/plain;charset=utf-8' });
@@ -330,13 +343,19 @@ const LunchOrderApp = () => {
   const ConfirmationDialog = () => {
     const selectedItemsList = Object.entries(selectedItems)
       .filter(([_, selected]) => selected)
-      .map(([itemName]) => ({
-        name: itemName,
-        quantity: quantities[itemName] || 1,
-        note: notes[itemName] || ''
-      }));
+      .map(([key]) => {
+        const [itemName, type] = key.split('-');
+        return {
+          name: itemName,
+          quantity: quantities[key] || 1,
+          type: type,
+          note: notes[key] || ''
+        };
+      });
 
     const totalItems = selectedItemsList.reduce((sum, item) => sum + item.quantity, 0);
+    const namiste = selectedItemsList.filter(item => item.type === 'namiste');
+    const ssebou = selectedItemsList.filter(item => item.type === 'ssebou');
 
     return (
       <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
@@ -364,18 +383,14 @@ const LunchOrderApp = () => {
                   <p className="font-semibold text-lg">{userName}</p>
                 </div>
                 <div>
-                  <p className="text-sm text-gray-600 mb-1">Typ</p>
+                  <p className="text-sm text-gray-600 mb-1">Shrnutí</p>
                   <p className="font-semibold text-lg">
-                    {orderType === 'namiste' ? '🍽️ Na místě' : '🥡 S sebou'}
+                    {namiste.length > 0 && `🍽️ ${namiste.reduce((sum, item) => sum + item.quantity, 0)}× na místě`}
+                    {namiste.length > 0 && ssebou.length > 0 && ' | '}
+                    {ssebou.length > 0 && `🥡 ${ssebou.reduce((sum, item) => sum + item.quantity, 0)}× s sebou`}
                   </p>
                 </div>
               </div>
-              {orderTypeNote && (
-                <div className="mt-3 pt-3 border-t border-gray-200">
-                  <p className="text-sm text-gray-600 mb-1">Poznámka k typu</p>
-                  <p className="text-gray-800">{orderTypeNote}</p>
-                </div>
-              )}
             </div>
 
             {/* Selected items */}
@@ -387,8 +402,17 @@ const LunchOrderApp = () => {
               <div className="space-y-3">
                 {selectedItemsList.map((item, index) => (
                   <div key={index} className="bg-orange-50 rounded-lg p-4 border-l-4 border-orange-500">
-                    <div className="flex items-center justify-between mb-1">
-                      <p className="font-semibold text-gray-800">{item.name}</p>
+                    <div className="flex items-center justify-between mb-2">
+                      <div className="flex items-center gap-2">
+                        <p className="font-semibold text-gray-800">{item.name}</p>
+                        <span className={`px-2 py-0.5 rounded-full text-xs font-semibold ${
+                          item.type === 'namiste' 
+                            ? 'bg-green-100 text-green-700' 
+                            : 'bg-blue-100 text-blue-700'
+                        }`}>
+                          {item.type === 'namiste' ? '🍽️ Na místě' : '🥡 S sebou'}
+                        </span>
+                      </div>
                       <span className="bg-orange-500 text-white px-3 py-1 rounded-full text-sm font-bold">
                         {item.quantity}× ks
                       </span>
@@ -448,93 +472,58 @@ const LunchOrderApp = () => {
       );
     }
 
-    const namiste = allOrders.filter(o => o.orderType === 'namiste');
-    const ssebou = allOrders.filter(o => o.orderType === 'ssebou');
-
     return (
       <div className="space-y-6">
         {/* Statistics */}
-        <div className="grid grid-cols-3 gap-4">
+        <div className="grid grid-cols-2 gap-4">
           <div className="bg-blue-50 rounded-lg p-4 text-center">
             <p className="text-3xl font-bold text-blue-600">{allOrders.length}</p>
-            <p className="text-sm text-blue-800">Celkem</p>
+            <p className="text-sm text-blue-800">Celkem objednávek</p>
           </div>
           <div className="bg-green-50 rounded-lg p-4 text-center">
-            <p className="text-3xl font-bold text-green-600">{namiste.length}</p>
-            <p className="text-sm text-green-800">Na místě</p>
-          </div>
-          <div className="bg-orange-50 rounded-lg p-4 text-center">
-            <p className="text-3xl font-bold text-orange-600">{ssebou.length}</p>
-            <p className="text-sm text-orange-800">S sebou</p>
+            <p className="text-3xl font-bold text-green-600">
+              {allOrders.reduce((sum, order) => sum + order.items.length, 0)}
+            </p>
+            <p className="text-sm text-green-800">Celkem položek</p>
           </div>
         </div>
 
         {/* Orders list */}
-        {namiste.length > 0 && (
-          <div>
-            <h4 className="font-semibold text-lg mb-3 flex items-center gap-2">
-              🍽️ Na místě ({namiste.length})
-            </h4>
-            <div className="space-y-3">
-              {namiste.map((order, index) => (
-                <div key={index} className="bg-green-50 border border-green-200 rounded-lg p-4">
-                  <div className="flex items-center justify-between mb-2">
-                    <p className="font-semibold text-gray-800">{order.userName}</p>
-                    <span className="text-xs text-gray-500">
-                      {new Date(order.timestamp).toLocaleTimeString('cs-CZ', { hour: '2-digit', minute: '2-digit' })}
-                    </span>
-                  </div>
-                  {order.orderTypeNote && (
-                    <p className="text-sm text-gray-600 mb-2 italic">📍 {order.orderTypeNote}</p>
-                  )}
-                  <div className="space-y-1">
-                    {order.items.map((item, idx) => (
-                      <div key={idx} className="text-sm">
-                        <span className="font-semibold text-green-600">{item.quantity || 1}×</span> <span className="text-gray-700">{item.name}</span>
-                        {item.note && (
-                          <span className="text-gray-500 ml-2">({item.note})</span>
-                        )}
-                      </div>
-                    ))}
-                  </div>
+        <div>
+          <h4 className="font-semibold text-lg mb-3">Všechny objednávky</h4>
+          <div className="space-y-3">
+            {allOrders.map((order, index) => (
+              <div key={index} className="bg-white border border-gray-200 rounded-lg p-4">
+                <div className="flex items-center justify-between mb-3">
+                  <p className="font-semibold text-gray-800">{order.userName}</p>
+                  <span className="text-xs text-gray-500">
+                    {new Date(order.timestamp).toLocaleTimeString('cs-CZ', { hour: '2-digit', minute: '2-digit' })}
+                  </span>
                 </div>
-              ))}
-            </div>
-          </div>
-        )}
-
-        {ssebou.length > 0 && (
-          <div>
-            <h4 className="font-semibold text-lg mb-3 flex items-center gap-2">
-              🥡 S sebou ({ssebou.length})
-            </h4>
-            <div className="space-y-3">
-              {ssebou.map((order, index) => (
-                <div key={index} className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-                  <div className="flex items-center justify-between mb-2">
-                    <p className="font-semibold text-gray-800">{order.userName}</p>
-                    <span className="text-xs text-gray-500">
-                      {new Date(order.timestamp).toLocaleTimeString('cs-CZ', { hour: '2-digit', minute: '2-digit' })}
-                    </span>
-                  </div>
-                  {order.orderTypeNote && (
-                    <p className="text-sm text-gray-600 mb-2 italic">📍 {order.orderTypeNote}</p>
-                  )}
-                  <div className="space-y-1">
-                    {order.items.map((item, idx) => (
-                      <div key={idx} className="text-sm">
-                        <span className="font-semibold text-blue-600">{item.quantity || 1}×</span> <span className="text-gray-700">{item.name}</span>
-                        {item.note && (
-                          <span className="text-gray-500 ml-2">({item.note})</span>
-                        )}
+                <div className="space-y-2">
+                  {order.items.map((item, idx) => (
+                    <div key={idx} className="flex items-center justify-between text-sm p-2 bg-gray-50 rounded">
+                      <div className="flex items-center gap-2">
+                        <span className="font-semibold text-orange-600">{item.quantity}×</span>
+                        <span className="text-gray-700">{item.name}</span>
+                        <span className={`px-2 py-0.5 rounded-full text-xs font-semibold ${
+                          item.type === 'namiste' 
+                            ? 'bg-green-100 text-green-700' 
+                            : 'bg-blue-100 text-blue-700'
+                        }`}>
+                          {item.type === 'namiste' ? '🍽️' : '🥡'}
+                        </span>
                       </div>
-                    ))}
-                  </div>
+                      {item.note && (
+                        <span className="text-gray-500 text-xs">({item.note})</span>
+                      )}
+                    </div>
+                  ))}
                 </div>
-              ))}
-            </div>
+              </div>
+            ))}
           </div>
-        )}
+        </div>
       </div>
     );
   };
@@ -725,7 +714,6 @@ const LunchOrderApp = () => {
             onClick={() => {
               setOrderSubmitted(false);
               setUserName('');
-              setOrderTypeNote('');
               setSelectedItems({});
               setQuantities({});
               setNotes({});
@@ -835,140 +823,166 @@ const LunchOrderApp = () => {
           />
         </div>
 
-        {/* Order type */}
-        <div className="bg-white rounded-lg shadow-lg p-6 mb-6">
-          <h2 className="text-xl font-semibold mb-4">Způsob vyzvednutí</h2>
-          
-          <div className="grid grid-cols-2 gap-4">
-            <button
-              onClick={() => setOrderType('namiste')}
-              className={`p-4 rounded-lg border-2 transition-all ${
-                orderType === 'namiste'
-                  ? 'border-green-500 bg-green-50'
-                  : 'border-gray-300 hover:border-green-300'
-              }`}
-            >
-              <div className="text-center">
-                <div className="text-3xl mb-2">🍽️</div>
-                <div className="font-semibold">Na místě</div>
-              </div>
-            </button>
-
-            <button
-              onClick={() => setOrderType('ssebou')}
-              className={`p-4 rounded-lg border-2 transition-all ${
-                orderType === 'ssebou'
-                  ? 'border-blue-500 bg-blue-50'
-                  : 'border-gray-300 hover:border-blue-300'
-              }`}
-            >
-              <div className="text-center">
-                <div className="text-3xl mb-2">🥡</div>
-                <div className="font-semibold">S sebou</div>
-              </div>
-            </button>
-          </div>
-
-          <div className="mt-4">
-            <input
-              type="text"
-              value={orderTypeNote}
-              onChange={(e) => setOrderTypeNote(e.target.value)}
-              placeholder={orderType === 'namiste' ? 'Poznámka k místu (např. zasedačka, stůl 5...)' : 'Poznámka k odběru (např. čas 12:30, vstup vzadu...)'}
-              className="w-full border border-gray-300 rounded-lg px-4 py-2 text-sm"
-            />
-          </div>
-        </div>
-
         {/* Menu selection */}
         <div className="bg-white rounded-lg shadow-lg p-6 mb-6">
           <h2 className="text-xl font-semibold mb-4">Výběr jídla</h2>
           
-          <div className="space-y-3">
-            {menuItems.map((item, index) => (
-              <div key={index} className="border border-gray-200 rounded-lg overflow-hidden">
-                <button
-                  onClick={() => toggleItemSelection(item.name)}
-                  className={`w-full p-4 text-left transition-colors ${
-                    selectedItems[item.name]
-                      ? 'bg-orange-50 border-l-4 border-orange-500'
-                      : 'hover:bg-gray-50'
-                  }`}
-                >
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-3">
-                      <div className={`w-6 h-6 rounded border-2 flex items-center justify-center ${
-                        selectedItems[item.name]
-                          ? 'bg-orange-500 border-orange-500'
-                          : 'border-gray-300'
-                      }`}>
-                        {selectedItems[item.name] && (
-                          <CheckCircle className="w-5 h-5 text-white" />
+          <div className="space-y-4">
+            {menuItems.map((item, index) => {
+              const namisteKey = getItemKey(item.name, 'namiste');
+              const ssebouKey = getItemKey(item.name, 'ssebou');
+              const isNamisteSelected = selectedItems[namisteKey];
+              const isSsebouSelected = selectedItems[ssebouKey];
+              const isAnySelected = isNamisteSelected || isSsebouSelected;
+              
+              return (
+                <div key={index} className="border border-gray-200 rounded-lg overflow-hidden">
+                  {/* Item name header */}
+                  <div className="bg-gray-50 p-3 border-b border-gray-200 flex items-center justify-between">
+                    <h3 className="font-semibold text-gray-800">{item.name}</h3>
+                    <button
+                      onClick={() => toggleItemExpanded(item.name)}
+                      className="p-1 hover:bg-gray-200 rounded transition-colors"
+                    >
+                      {expandedItems[item.name] ? (
+                        <ChevronUp className="w-5 h-5 text-gray-500" />
+                      ) : (
+                        <ChevronDown className="w-5 h-5 text-gray-500" />
+                      )}
+                    </button>
+                  </div>
+
+                  {/* Selection buttons */}
+                  <div className="p-4 space-y-3">
+                    {/* Na místě option */}
+                    <div className={`border-2 rounded-lg p-3 transition-all ${
+                      isNamisteSelected 
+                        ? 'border-green-500 bg-green-50' 
+                        : 'border-gray-200 hover:border-green-300'
+                    }`}>
+                      <div className="flex items-center justify-between">
+                        <button
+                          onClick={() => toggleItemSelection(item.name, 'namiste')}
+                          className="flex items-center gap-3 flex-1"
+                        >
+                          <div className={`w-6 h-6 rounded border-2 flex items-center justify-center ${
+                            isNamisteSelected
+                              ? 'bg-green-500 border-green-500'
+                              : 'border-gray-300'
+                          }`}>
+                            {isNamisteSelected && (
+                              <CheckCircle className="w-5 h-5 text-white" />
+                            )}
+                          </div>
+                          <span className="font-medium text-gray-700">🍽️ Na místě</span>
+                        </button>
+                        
+                        {isNamisteSelected && (
+                          <div className="flex items-center gap-2 bg-white border-2 border-green-300 rounded-lg px-2">
+                            <button
+                              onClick={() => updateQuantity(item.name, 'namiste', -1)}
+                              className="text-green-600 hover:text-green-700 font-bold text-lg px-2 py-1"
+                              title={quantities[namisteKey] === 1 ? "Kliknutím odznačíte" : "Snížit počet"}
+                            >
+                              −
+                            </button>
+                            <span className="font-bold text-gray-800 min-w-[2ch] text-center">
+                              {quantities[namisteKey] || 1}
+                            </span>
+                            <button
+                              onClick={() => updateQuantity(item.name, 'namiste', 1)}
+                              className="text-green-600 hover:text-green-700 font-bold text-lg px-2 py-1"
+                            >
+                              +
+                            </button>
+                          </div>
                         )}
                       </div>
-                      <span className="font-medium text-gray-800">{item.name}</span>
                     </div>
-                    <div className="flex items-center gap-2">
-                      {selectedItems[item.name] && (
-                        <div className="flex items-center gap-2 bg-white border-2 border-orange-300 rounded-lg px-2" onClick={(e) => e.stopPropagation()}>
-                          <button
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              updateQuantity(item.name, -1);
-                            }}
-                            className="text-orange-600 hover:text-orange-700 font-bold text-lg px-2 py-1"
-                            title={quantities[item.name] === 1 ? "Kliknutím odznačíte jídlo" : "Snížit počet"}
-                          >
-                            −
-                          </button>
-                          <span className="font-bold text-gray-800 min-w-[2ch] text-center">
-                            {quantities[item.name] || 1}
-                          </span>
-                          <button
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              updateQuantity(item.name, 1);
-                            }}
-                            className="text-orange-600 hover:text-orange-700 font-bold text-lg px-2 py-1"
-                          >
-                            +
-                          </button>
-                        </div>
-                      )}
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          toggleItemExpanded(item.name);
-                        }}
-                        className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
-                      >
-                        {expandedItems[item.name] ? (
-                          <ChevronUp className="w-5 h-5 text-gray-500" />
-                        ) : (
-                          <ChevronDown className="w-5 h-5 text-gray-500" />
+
+                    {/* S sebou option */}
+                    <div className={`border-2 rounded-lg p-3 transition-all ${
+                      isSsebouSelected 
+                        ? 'border-blue-500 bg-blue-50' 
+                        : 'border-gray-200 hover:border-blue-300'
+                    }`}>
+                      <div className="flex items-center justify-between">
+                        <button
+                          onClick={() => toggleItemSelection(item.name, 'ssebou')}
+                          className="flex items-center gap-3 flex-1"
+                        >
+                          <div className={`w-6 h-6 rounded border-2 flex items-center justify-center ${
+                            isSsebouSelected
+                              ? 'bg-blue-500 border-blue-500'
+                              : 'border-gray-300'
+                          }`}>
+                            {isSsebouSelected && (
+                              <CheckCircle className="w-5 h-5 text-white" />
+                            )}
+                          </div>
+                          <span className="font-medium text-gray-700">🥡 S sebou</span>
+                        </button>
+                        
+                        {isSsebouSelected && (
+                          <div className="flex items-center gap-2 bg-white border-2 border-blue-300 rounded-lg px-2">
+                            <button
+                              onClick={() => updateQuantity(item.name, 'ssebou', -1)}
+                              className="text-blue-600 hover:text-blue-700 font-bold text-lg px-2 py-1"
+                              title={quantities[ssebouKey] === 1 ? "Kliknutím odznačíte" : "Snížit počet"}
+                            >
+                              −
+                            </button>
+                            <span className="font-bold text-gray-800 min-w-[2ch] text-center">
+                              {quantities[ssebouKey] || 1}
+                            </span>
+                            <button
+                              onClick={() => updateQuantity(item.name, 'ssebou', 1)}
+                              className="text-blue-600 hover:text-blue-700 font-bold text-lg px-2 py-1"
+                            >
+                              +
+                            </button>
+                          </div>
                         )}
-                      </button>
+                      </div>
                     </div>
+
+                    {/* Notes section - only show when any option is selected */}
+                    {isAnySelected && expandedItems[item.name] && (
+                      <div className="pt-3 border-t border-gray-200 space-y-2">
+                        {isNamisteSelected && (
+                          <div>
+                            <label className="block text-xs font-medium text-gray-600 mb-1">
+                              Poznámka k "Na místě"
+                            </label>
+                            <input
+                              type="text"
+                              value={notes[namisteKey] || ''}
+                              onChange={(e) => setNotes({ ...notes, [namisteKey]: e.target.value })}
+                              placeholder="např. bez cibule, méně soli..."
+                              className="w-full border border-gray-300 rounded px-3 py-2 text-sm"
+                            />
+                          </div>
+                        )}
+                        {isSsebouSelected && (
+                          <div>
+                            <label className="block text-xs font-medium text-gray-600 mb-1">
+                              Poznámka k "S sebou"
+                            </label>
+                            <input
+                              type="text"
+                              value={notes[ssebouKey] || ''}
+                              onChange={(e) => setNotes({ ...notes, [ssebouKey]: e.target.value })}
+                              placeholder="např. bez cibule, méně soli..."
+                              className="w-full border border-gray-300 rounded px-3 py-2 text-sm"
+                            />
+                          </div>
+                        )}
+                      </div>
+                    )}
                   </div>
-                </button>
-                
-                {expandedItems[item.name] && (
-                  <div className="p-4 bg-gray-50 border-t border-gray-200">
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Poznámka k jídlu
-                    </label>
-                    <input
-                      type="text"
-                      value={notes[item.name] || ''}
-                      onChange={(e) => setNotes({ ...notes, [item.name]: e.target.value })}
-                      placeholder="např. bez cibule, méně soli..."
-                      className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm"
-                      onClick={(e) => e.stopPropagation()}
-                    />
-                  </div>
-                )}
-              </div>
-            ))}
+                </div>
+              );
+            })}
           </div>
         </div>
 
@@ -1039,7 +1053,13 @@ const LunchOrderApp = () => {
             <Info className="w-5 h-5 text-blue-600 mt-0.5" />
             <div className="text-sm text-blue-800">
               <p className="font-semibold mb-1">Tip:</p>
-              <p>U každého jídla můžeš přidat poznámku (např. "bez cibule", "méně solené"). Před odesláním si zkontroluj všechny detaily v potvrzovacím dialogu.</p>
+              <p>U každého jídla můžeš vybrat:</p>
+              <ul className="list-disc ml-5 mt-1 space-y-1">
+                <li><strong>🍽️ Na místě</strong> - zaškrtni a nastav počet</li>
+                <li><strong>🥡 S sebou</strong> - zaškrtni a nastav počet</li>
+                <li><strong>Oboje najednou!</strong> - např. 2× na místě + 1× s sebou</li>
+                <li>Klikni na šipku ⌄ pro přidání poznámek</li>
+              </ul>
             </div>
           </div>
         </div>

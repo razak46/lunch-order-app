@@ -769,7 +769,7 @@ const LunchOrderApp = () => {
       <div className="min-h-screen bg-gradient-to-br from-orange-50 to-orange-100 flex items-center justify-center p-4">
         <div className="bg-white rounded-lg shadow-lg p-8 max-w-md w-full text-center relative">
           <div className="absolute top-4 right-4">
-            
+            <a
               href="/admin"
               className="px-4 py-2 bg-orange-500 text-white rounded-lg hover:bg-orange-600 text-sm font-medium transition-colors inline-block"
             >
@@ -791,7 +791,7 @@ const LunchOrderApp = () => {
       <div className="max-w-3xl mx-auto">
         <div className="flex items-center justify-between mb-6">
           <h1 className="text-3xl font-bold text-gray-800">🍽️ Objednávka oběda</h1>
-          
+          <a
             href="/admin"
             className="px-4 py-2 bg-orange-500 text-white rounded-lg hover:bg-orange-600 font-medium transition-colors inline-block"
           >

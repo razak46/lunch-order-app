@@ -785,10 +785,9 @@ const LunchOrderApp = () => {
           <div className="absolute top-4 right-4">
             <button
               onClick={() => setShowAdminLogin(true)}
-              className="p-2 text-gray-400 hover:text-orange-500 transition-colors"
-              title="Admin přihlášení"
+              className="px-3 py-1 text-sm text-orange-600 hover:text-orange-700 font-medium transition-colors"
             >
-              <Lock className="w-5 h-5" />
+              Administrace
             </button>
           </div>
           <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
@@ -809,10 +808,9 @@ const LunchOrderApp = () => {
           <h1 className="text-3xl font-bold text-gray-800">🍽️ Objednávka oběda</h1>
           <button
             onClick={() => setShowAdminLogin(true)}
-            className="p-2 text-gray-400 hover:text-orange-500 transition-colors"
-            title="Admin přihlášení"
+            className="px-4 py-2 text-orange-600 hover:text-orange-700 font-medium transition-colors"
           >
-            <Lock className="w-5 h-5" />
+            Administrace
           </button>
         </div>
 

@@ -784,8 +784,11 @@ const LunchOrderApp = () => {
         <div className="bg-white rounded-lg shadow-lg p-8 max-w-md w-full text-center relative">
           <div className="absolute top-4 right-4">
             <button
-              onClick={() => setShowAdminLogin(true)}
-              className="px-3 py-1 text-sm text-orange-600 hover:text-orange-700 font-medium transition-colors"
+              onClick={() => {
+                console.log('ADMIN BUTTON CLICKED IN NO MENU!');
+                setShowAdminLogin(true);
+              }}
+              className="px-4 py-2 bg-orange-500 text-white rounded-lg hover:bg-orange-600 text-sm font-medium transition-colors"
             >
               Administrace
             </button>
@@ -806,12 +809,17 @@ const LunchOrderApp = () => {
       <div className="max-w-3xl mx-auto">
         <div className="flex items-center justify-between mb-6">
           <h1 className="text-3xl font-bold text-gray-800">🍽️ Objednávka oběda</h1>
-          <button
-            onClick={() => setShowAdminLogin(true)}
-            className="px-4 py-2 text-orange-600 hover:text-orange-700 font-medium transition-colors"
-          >
-            Administrace
-          </button>
+          <div className="flex gap-3">
+            <button
+              onClick={() => {
+                console.log('ADMIN BUTTON CLICKED!');
+                setShowAdminLogin(true);
+              }}
+              className="px-4 py-2 bg-orange-500 text-white rounded-lg hover:bg-orange-600 font-medium transition-colors"
+            >
+              Administrace
+            </button>
+          </div>
         </div>
 
         {/* Menu image */}

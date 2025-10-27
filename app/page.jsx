@@ -33,6 +33,17 @@ const LunchOrderApp = () => {
   const [isLoadingOrders, setIsLoadingOrders] = useState(false);
   const [showOrdersSection, setShowOrdersSection] = useState(true);
 
+  // Check for admin mode from URL
+  useEffect(() => {
+    const urlParams = new URLSearchParams(window.location.search);
+    if (urlParams.get('admin') === 'true') {
+      const adminCookie = document.cookie.split('; ').find(row => row.startsWith('admin='));
+      if (adminCookie) {
+        setIsAdminMode(true);
+      }
+    }
+  }, []);
+
   // Load menu on mount
   useEffect(() => {
     loadMenu();
@@ -607,7 +618,11 @@ const LunchOrderApp = () => {
           <div className="flex items-center justify-between mb-6">
             <h1 className="text-3xl font-bold text-gray-800">🍽️ Správa obědů</h1>
             <button
-              onClick={() => setIsAdminMode(false)}
+              onClick={() => {
+                setIsAdminMode(false);
+                document.cookie = 'admin=; path=/; expires=Thu, 01 Jan 1970 00:00:01 GMT;';
+                window.location.href = '/';
+              }}
               className="px-4 py-2 bg-gray-500 hover:bg-gray-600 text-white rounded-lg transition-colors flex items-center gap-2"
             >
               <Unlock className="w-4 h-4" />
@@ -783,15 +798,12 @@ const LunchOrderApp = () => {
       <div className="min-h-screen bg-gradient-to-br from-orange-50 to-orange-100 flex items-center justify-center p-4">
         <div className="bg-white rounded-lg shadow-lg p-8 max-w-md w-full text-center relative">
           <div className="absolute top-4 right-4">
-            <button
-              onClick={() => {
-                console.log('ADMIN BUTTON CLICKED IN NO MENU!');
-                setShowAdminLogin(true);
-              }}
-              className="px-4 py-2 bg-orange-500 text-white rounded-lg hover:bg-orange-600 text-sm font-medium transition-colors"
+            
+              href="/admin"
+              className="px-4 py-2 bg-orange-500 text-white rounded-lg hover:bg-orange-600 text-sm font-medium transition-colors inline-block"
             >
               Administrace
-            </button>
+            </a>
           </div>
           <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
             <AlertCircle className="w-10 h-10 text-gray-400" />
@@ -810,15 +822,12 @@ const LunchOrderApp = () => {
         <div className="flex items-center justify-between mb-6">
           <h1 className="text-3xl font-bold text-gray-800">🍽️ Objednávka oběda</h1>
           <div className="flex gap-3">
-            <button
-              onClick={() => {
-                console.log('ADMIN BUTTON CLICKED!');
-                setShowAdminLogin(true);
-              }}
-              className="px-4 py-2 bg-orange-500 text-white rounded-lg hover:bg-orange-600 font-medium transition-colors"
+            
+              href="/admin"
+              className="px-4 py-2 bg-orange-500 text-white rounded-lg hover:bg-orange-600 font-medium transition-colors inline-block"
             >
               Administrace
-            </button>
+            </a>
           </div>
         </div>
 

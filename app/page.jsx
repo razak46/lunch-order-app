@@ -781,11 +781,12 @@ const LunchOrderApp = () => {
   if (!isMenuConfirmed || menuItems.length === 0) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-orange-50 to-orange-100 flex items-center justify-center p-4">
-        <div className="bg-white rounded-lg shadow-lg p-8 max-w-md w-full text-center">
+        <div className="bg-white rounded-lg shadow-lg p-8 max-w-md w-full text-center relative">
           <div className="absolute top-4 right-4">
             <button
               onClick={() => setShowAdminLogin(true)}
               className="p-2 text-gray-400 hover:text-orange-500 transition-colors"
+              title="Admin přihlášení"
             >
               <Lock className="w-5 h-5" />
             </button>
@@ -809,6 +810,7 @@ const LunchOrderApp = () => {
           <button
             onClick={() => setShowAdminLogin(true)}
             className="p-2 text-gray-400 hover:text-orange-500 transition-colors"
+            title="Admin přihlášení"
           >
             <Lock className="w-5 h-5" />
           </button>
@@ -1078,7 +1080,6 @@ const LunchOrderApp = () => {
                 <li><strong>🍽️ Na místě</strong> - zaškrtni a nastav počet</li>
                 <li><strong>🥡 S sebou</strong> - zaškrtni a nastav počet</li>
                 <li><strong>Oboje najednou!</strong> - např. 2× na místě + 1× s sebou</li>
-                
               </ul>
             </div>
           </div>
@@ -1096,6 +1097,7 @@ const LunchOrderApp = () => {
                 onKeyPress={(e) => e.key === 'Enter' && handleAdminLogin()}
                 placeholder="Heslo"
                 className="w-full px-4 py-2 border border-gray-300 rounded-lg mb-4"
+                autoFocus
               />
               <div className="flex gap-2">
                 <button

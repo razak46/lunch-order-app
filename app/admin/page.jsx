@@ -71,8 +71,8 @@ export default function AdminLoginPage() {
         </form>
 
         <div className="mt-6 pt-6 border-t border-gray-200">
-          <p className="text-xs text-white-500 text-center">
-            Výchozí heslo: admin123
+          <p className="text-xs text-grey-500 text-center">
+            
           </p>
         </div>
       </div>

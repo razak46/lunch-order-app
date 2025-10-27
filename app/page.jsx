@@ -792,7 +792,7 @@ const LunchOrderApp = () => {
     );
   }
 
-  // User mode - No menu available
+   // User mode - No menu available
   if (!isMenuConfirmed || menuItems.length === 0) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-orange-50 to-orange-100 flex items-center justify-center p-4">
@@ -814,7 +814,6 @@ const LunchOrderApp = () => {
       </div>
     );
   }
-
   // User mode - Order form
   return (
     <div className="min-h-screen bg-gradient-to-br from-orange-50 to-orange-100 p-4">

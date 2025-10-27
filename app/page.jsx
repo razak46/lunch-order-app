@@ -19,9 +19,9 @@ const LunchOrderApp = () => {
 
   // User order state
   const [userName, setUserName] = useState('');
-  const [selectedItems, setSelectedItems] = useState({}); // { "itemName-namiste": true, "itemName-ssebou": true }
-  const [quantities, setQuantities] = useState({}); // { "itemName-namiste": 2, "itemName-ssebou": 1 }
-  const [notes, setNotes] = useState({}); // { "itemName-namiste": "note", "itemName-ssebou": "note" }
+  const [selectedItems, setSelectedItems] = useState({});
+  const [quantities, setQuantities] = useState({});
+  const [notes, setNotes] = useState({});
   const [orderSubmitted, setOrderSubmitted] = useState(false);
   const [expandedItems, setExpandedItems] = useState({});
 
@@ -48,7 +48,6 @@ const LunchOrderApp = () => {
   useEffect(() => {
     loadMenu();
     loadOrders();
-    // Refresh orders every 30 seconds
     const interval = setInterval(loadOrders, 30000);
     return () => clearInterval(interval);
   }, []);
@@ -181,7 +180,6 @@ const LunchOrderApp = () => {
     const key = getItemKey(itemName, type);
     setSelectedItems(prev => {
       const newSelected = !prev[key];
-      // Initialize quantity when selecting
       if (newSelected && !quantities[key]) {
         setQuantities(prevQty => ({
           ...prevQty,
@@ -201,7 +199,6 @@ const LunchOrderApp = () => {
       const currentQty = prev[key] || 1;
       const newQty = Math.max(0, Math.min(99, currentQty + change));
       
-      // If quantity becomes 0, deselect the item
       if (newQty === 0) {
         setSelectedItems(prevSelected => ({
           ...prevSelected,
@@ -223,7 +220,6 @@ const LunchOrderApp = () => {
     }));
   };
 
-  // NEW: Show confirmation dialog instead of direct submit
   const handleOrderClick = () => {
     if (!userName || Object.keys(selectedItems).filter(k => selectedItems[k]).length === 0) {
       return;
@@ -231,7 +227,6 @@ const LunchOrderApp = () => {
     setShowConfirmDialog(true);
   };
 
-  // NEW: Actual submit after confirmation
   const confirmAndSubmitOrder = async () => {
     try {
       const orderData = {
@@ -261,7 +256,7 @@ const LunchOrderApp = () => {
       if (data.success) {
         setOrderSubmitted(true);
         setShowConfirmDialog(false);
-        loadOrders(); // Refresh orders list
+        loadOrders();
         setError('');
       } else {
         setError(data.error || 'Chyba při odesílání objednávky');
@@ -282,7 +277,6 @@ const LunchOrderApp = () => {
         let exportText = '🍽️ OBJEDNÁVKY OBĚD\n';
         exportText += '═════════════════════════════════\n\n';
 
-        // Agregace dat pro NA MÍSTĚ a S SEBOU
         const namisteMap = new Map();
         const ssebouMap = new Map();
         
@@ -300,9 +294,7 @@ const LunchOrderApp = () => {
             const menuData = mapToUse.get(item.name);
             menuData.total += item.quantity || 1;
             
-            // Přidej poznámku, pokud existuje
             if (item.note && item.note.trim()) {
-              // Zkontroluj, jestli už tato poznámka není v seznamu
               const existingNote = menuData.withNotes.find(n => n.note === item.note.trim());
               if (existingNote) {
                 existingNote.quantity += item.quantity || 1;
@@ -316,7 +308,6 @@ const LunchOrderApp = () => {
           });
         });
 
-        // Výpis NA MÍSTĚ
         if (namisteMap.size > 0) {
           exportText += '🍽️ NA MÍSTĚ:\n';
           exportText += '─────────────────────────────────\n\n';
@@ -326,7 +317,6 @@ const LunchOrderApp = () => {
             exportText += `"${menuName}" - ${data.total} ks\n`;
             namisteTotal += data.total;
             
-            // Pokud jsou poznámky, vypiš je
             if (data.withNotes.length > 0) {
               data.withNotes.forEach(noteItem => {
                 exportText += `  z toho ${noteItem.quantity} ks .. "${noteItem.note}"\n`;
@@ -338,7 +328,6 @@ const LunchOrderApp = () => {
           exportText += `CELKEM NA MÍSTĚ: ${namisteTotal} ks\n\n`;
         }
 
-        // Výpis S SEBOU
         if (ssebouMap.size > 0) {
           exportText += '🥡 S SEBOU:\n';
           exportText += '─────────────────────────────────\n\n';
@@ -348,7 +337,6 @@ const LunchOrderApp = () => {
             exportText += `"${menuName}" - ${data.total} ks\n`;
             ssebouTotal += data.total;
             
-            // Pokud jsou poznámky, vypiš je
             if (data.withNotes.length > 0) {
               data.withNotes.forEach(noteItem => {
                 exportText += `  z toho ${noteItem.quantity} ks .. "${noteItem.note}"\n`;
@@ -360,7 +348,6 @@ const LunchOrderApp = () => {
           exportText += `CELKEM S SEBOU: ${ssebouTotal} ks\n\n`;
         }
 
-        // Celkový součet
         const grandTotal = [...namisteMap.values()].reduce((sum, data) => sum + data.total, 0) +
                           [...ssebouMap.values()].reduce((sum, data) => sum + data.total, 0);
         
@@ -381,7 +368,6 @@ const LunchOrderApp = () => {
     }
   };
 
-  // NEW: Confirmation Dialog Component
   const ConfirmationDialog = () => {
     const selectedItemsList = Object.entries(selectedItems)
       .filter(([_, selected]) => selected)
@@ -395,14 +381,12 @@ const LunchOrderApp = () => {
         };
       });
 
-    const totalItems = selectedItemsList.reduce((sum, item) => sum + item.quantity, 0);
     const namiste = selectedItemsList.filter(item => item.type === 'namiste');
     const ssebou = selectedItemsList.filter(item => item.type === 'ssebou');
 
     return (
       <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
         <div className="bg-white rounded-lg shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-hidden">
-          {/* Header */}
           <div className="bg-gradient-to-r from-orange-500 to-orange-600 text-white p-6">
             <div className="flex items-center justify-between">
               <h2 className="text-2xl font-bold">Kontrola objednávky</h2>
@@ -415,9 +399,7 @@ const LunchOrderApp = () => {
             </div>
           </div>
 
-          {/* Content */}
           <div className="p-6 overflow-y-auto max-h-[calc(90vh-200px)]">
-            {/* User info */}
             <div className="mb-6 bg-gray-50 rounded-lg p-4">
               <div className="grid grid-cols-2 gap-4">
                 <div>
@@ -435,7 +417,6 @@ const LunchOrderApp = () => {
               </div>
             </div>
 
-            {/* Order items */}
             <div className="space-y-4">
               {namiste.length > 0 && (
                 <div>
@@ -487,7 +468,6 @@ const LunchOrderApp = () => {
             </div>
           </div>
 
-          {/* Footer */}
           <div className="border-t border-gray-200 p-6 bg-gray-50">
             <div className="flex gap-3">
               <button
@@ -510,7 +490,6 @@ const LunchOrderApp = () => {
     );
   };
 
-  // Orders display component
   const OrdersDisplay = () => {
     if (allOrders.length === 0) {
       return (
@@ -521,7 +500,6 @@ const LunchOrderApp = () => {
       );
     }
 
-    // Group orders by type
     const namisteOrders = [];
     const ssebouOrders = [];
     
@@ -598,7 +576,6 @@ const LunchOrderApp = () => {
     );
   };
 
-  // Loading state
   if (isLoadingMenu) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-orange-50 to-orange-100 flex items-center justify-center">
@@ -610,7 +587,6 @@ const LunchOrderApp = () => {
     );
   }
 
-  // Admin mode
   if (isAdminMode) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-orange-50 to-orange-100 p-4">
@@ -705,7 +681,6 @@ const LunchOrderApp = () => {
             </div>
           ) : (
             <div className="space-y-6">
-              {/* Menu preview */}
               <div className="bg-white rounded-lg shadow-lg p-6">
                 <div className="flex items-center justify-between mb-4">
                   <h2 className="text-xl font-semibold">Aktivní menu</h2>
@@ -731,7 +706,6 @@ const LunchOrderApp = () => {
                 </div>
               </div>
 
-              {/* Orders management */}
               <div className="bg-white rounded-lg shadow-lg p-6">
                 <div className="flex items-center justify-between mb-4">
                   <h2 className="text-xl font-semibold flex items-center gap-2">
@@ -764,7 +738,6 @@ const LunchOrderApp = () => {
     );
   }
 
-  // User mode - Order submitted
   if (orderSubmitted) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-orange-50 to-orange-100 flex items-center justify-center p-4">
@@ -792,7 +765,6 @@ const LunchOrderApp = () => {
     );
   }
 
-   // User mode - No menu available
   if (!isMenuConfirmed || menuItems.length === 0) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-orange-50 to-orange-100 flex items-center justify-center p-4">
@@ -814,23 +786,20 @@ const LunchOrderApp = () => {
       </div>
     );
   }
-  // User mode - Order form
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-orange-50 to-orange-100 p-4">
       <div className="max-w-3xl mx-auto">
         <div className="flex items-center justify-between mb-6">
           <h1 className="text-3xl font-bold text-gray-800">🍽️ Objednávka oběda</h1>
-          <div className="flex gap-3">
-            
-              href="/admin"
-              className="px-4 py-2 bg-orange-500 text-white rounded-lg hover:bg-orange-600 font-medium transition-colors inline-block"
-            >
-              Administrace
-            </a>
-          </div>
+          
+            href="/admin"
+            className="px-4 py-2 bg-orange-500 text-white rounded-lg hover:bg-orange-600 font-medium transition-colors inline-block"
+          >
+            Administrace
+          </a>
         </div>
 
-        {/* Menu image */}
         {menuImage && (
           <div className="bg-white rounded-lg shadow-lg p-6 mb-6">
             <h2 className="text-xl font-semibold mb-4">Menu</h2>
@@ -838,7 +807,6 @@ const LunchOrderApp = () => {
           </div>
         )}
 
-        {/* User name input */}
         <div className="bg-white rounded-lg shadow-lg p-6 mb-6">
           <label className="block text-sm font-medium text-gray-700 mb-2">
             Vaše jméno
@@ -852,7 +820,6 @@ const LunchOrderApp = () => {
           />
         </div>
 
-        {/* Menu items */}
         <div className="bg-white rounded-lg shadow-lg p-6 mb-6">
           <h2 className="text-xl font-semibold mb-4">Vyberte si</h2>
           <div className="space-y-4">
@@ -880,7 +847,6 @@ const LunchOrderApp = () => {
                   </div>
 
                   <div className="space-y-3">
-                    {/* Na místě option */}
                     <div className={`border-2 rounded-lg p-3 transition-colors ${
                       isNamisteSelected
                         ? 'border-green-500 bg-green-50'
@@ -908,7 +874,6 @@ const LunchOrderApp = () => {
                             <button
                               onClick={() => updateQuantity(item.name, 'namiste', -1)}
                               className="text-green-600 hover:text-green-700 font-bold text-lg px-2 py-1"
-                              title={quantities[namisteKey] === 1 ? "Kliknutím odznačíte" : "Snížit počet"}
                             >
                               −
                             </button>
@@ -926,7 +891,6 @@ const LunchOrderApp = () => {
                       </div>
                     </div>
 
-                    {/* S sebou option */}
                     <div className={`border-2 rounded-lg p-3 transition-colors ${
                       isSsebouSelected
                         ? 'border-blue-500 bg-blue-50'
@@ -954,7 +918,6 @@ const LunchOrderApp = () => {
                             <button
                               onClick={() => updateQuantity(item.name, 'ssebou', -1)}
                               className="text-blue-600 hover:text-blue-700 font-bold text-lg px-2 py-1"
-                              title={quantities[ssebouKey] === 1 ? "Kliknutím odznačíte" : "Snížit počet"}
                             >
                               −
                             </button>
@@ -972,7 +935,6 @@ const LunchOrderApp = () => {
                       </div>
                     </div>
 
-                    {/* Notes section - only show when any option is selected */}
                     {isAnySelected && (
                       <div className="pt-3 border-t border-gray-200 space-y-2">
                         {isNamisteSelected && (
@@ -1012,7 +974,6 @@ const LunchOrderApp = () => {
           </div>
         </div>
 
-        {/* NEW: Live orders display */}
         <div className="bg-white rounded-lg shadow-lg p-6 mb-6">
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-xl font-semibold flex items-center gap-2">
@@ -1066,7 +1027,6 @@ const LunchOrderApp = () => {
           )}
         </div>
 
-        {/* Submit button */}
         <button
           onClick={handleOrderClick}
           disabled={!userName || Object.keys(selectedItems).filter(k => selectedItems[k]).length === 0}
@@ -1083,7 +1043,6 @@ const LunchOrderApp = () => {
           </div>
         )}
 
-        {/* Info box */}
         <div className="mt-6 bg-blue-50 border border-blue-200 rounded-lg p-4">
           <div className="flex items-start gap-2">
             <Info className="w-5 h-5 text-blue-600 mt-0.5" />
@@ -1098,45 +1057,8 @@ const LunchOrderApp = () => {
             </div>
           </div>
         </div>
-
-        {/* Admin login modal */}
-        {showAdminLogin && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-            <div className="bg-white rounded-lg shadow-2xl p-6 max-w-sm w-full">
-              <h3 className="text-xl font-semibold mb-4">Admin přihlášení</h3>
-              <input
-                type="password"
-                value={adminPassword}
-                onChange={(e) => setAdminPassword(e.target.value)}
-                onKeyPress={(e) => e.key === 'Enter' && handleAdminLogin()}
-                placeholder="Heslo"
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg mb-4"
-                autoFocus
-              />
-              <div className="flex gap-2">
-                <button
-                  onClick={() => {
-                    setShowAdminLogin(false);
-                    setAdminPassword('');
-                    setError('');
-                  }}
-                  className="flex-1 px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50"
-                >
-                  Zrušit
-                </button>
-                <button
-                  onClick={handleAdminLogin}
-                  className="flex-1 px-4 py-2 bg-orange-500 hover:bg-orange-600 text-white rounded-lg"
-                >
-                  Přihlásit
-                </button>
-              </div>
-            </div>
-          </div>
-        )}
       </div>
 
-      {/* NEW: Confirmation Dialog */}
       {showConfirmDialog && <ConfirmationDialog />}
     </div>
   );

@@ -212,7 +212,7 @@ const LunchOrderApp = () => {
           setError(data.error);
         } else if (data.menuItems) {
           // Auto-add active drinks after recognized menu items
-          const activeDrinks = drinks.filter(d => d.active).map(d => ({ name: d.name, isDrink: true }));
+          const activeDrinks = (drinks || []).filter(d => d && d.active).map(d => ({ name: d.name, isDrink: true }));
           const menuWithDrinks = [
             ...data.menuItems.map(item => ({ ...item, isDrink: false })),
             ...activeDrinks
@@ -429,6 +429,7 @@ const LunchOrderApp = () => {
         const ssebouMap = new Map();
         
         data.orders.forEach(order => {
+          if (!order.items || !Array.isArray(order.items)) return;
           order.items.forEach(item => {
             const mapToUse = item.type === 'namiste' ? namisteMap : ssebouMap;
             
@@ -654,6 +655,7 @@ const LunchOrderApp = () => {
     const ssebouOrders = [];
     
     allOrders.forEach(order => {
+      if (!order.items || !Array.isArray(order.items)) return;
       order.items.forEach(item => {
         const orderItem = {
           userName: order.userName,
@@ -1140,7 +1142,7 @@ const LunchOrderApp = () => {
         <div className="bg-white rounded-lg shadow-lg p-6 mb-6">
           <h2 className="text-xl font-semibold mb-4">🍽️ Jídla</h2>
           <div className="space-y-4">
-            {menuItems.filter(item => !item.isDrink).map((item, index) => {
+            {menuItems.filter(item => item && !item.isDrink).map((item, index) => {
               const namisteKey = getItemKey(item.name, 'namiste');
               const ssebouKey = getItemKey(item.name, 'ssebou');
               const isNamisteSelected = selectedItems[namisteKey];
@@ -1292,11 +1294,11 @@ const LunchOrderApp = () => {
         </div>
 
         {/* Drinks Section */}
-        {menuItems.filter(item => item.isDrink).length > 0 && (
+        {menuItems.filter(item => item && item.isDrink).length > 0 && (
           <div className="bg-white rounded-lg shadow-lg p-6 mb-6">
             <h2 className="text-xl font-semibold mb-4">🥤 Nápoje</h2>
             <div className="space-y-4">
-              {menuItems.filter(item => item.isDrink).map((item, index) => {
+              {menuItems.filter(item => item && item.isDrink).map((item, index) => {
                 const namisteKey = getItemKey(item.name, 'namiste');
                 const ssebouKey = getItemKey(item.name, 'ssebou');
                 const isNamisteSelected = selectedItems[namisteKey];

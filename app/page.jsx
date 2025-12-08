@@ -1,6 +1,6 @@
 'use client';
 import React, { useState, useEffect } from 'react';
-import { Camera, CheckCircle, AlertCircle, Loader2, Trash2, MessageSquare, ChevronDown, ChevronUp, Download, Lock, Unlock, Info, Users, ShoppingBag, X, Eye, Plus, Minus } from 'lucide-react';
+import { Camera, CheckCircle, AlertCircle, Loader2, Trash2, MessageSquare, ChevronDown, ChevronUp, Download, Lock, Unlock, Info, Users, ShoppingBag, X, Eye, Plus, Minus, ArrowUp, ArrowDown } from 'lucide-react';
 
 const LunchOrderApp = () => {
   // Admin state
@@ -170,6 +170,58 @@ const LunchOrderApp = () => {
       setAllOrders([]);
     } catch (err) {
       setError('Chyba při mazání menu');
+    }
+  };
+
+  const moveItemUp = (index) => {
+    if (index === 0) return;
+    const newItems = [...menuItems];
+    [newItems[index - 1], newItems[index]] = [newItems[index], newItems[index - 1]];
+    setMenuItems(newItems);
+  };
+
+  const moveItemDown = (index) => {
+    if (index === menuItems.length - 1) return;
+    const newItems = [...menuItems];
+    [newItems[index], newItems[index + 1]] = [newItems[index + 1], newItems[index]];
+    setMenuItems(newItems);
+  };
+
+  const deleteMenuItem = (index) => {
+    setMenuItems(menuItems.filter((_, i) => i !== index));
+  };
+
+  const addNewMenuItem = () => {
+    setMenuItems([...menuItems, { name: '' }]);
+  };
+
+  const updateMenuItems = async () => {
+    try {
+      const response = await fetch('/api/menu', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'confirm',
+          menu: menuImage,
+          menuItems: menuItems.filter(item => item.name.trim() !== '')
+        })
+      });
+
+      const data = await response.json();
+      
+      if (data.success) {
+        setError('');
+        // Show success feedback
+        const successMsg = document.createElement('div');
+        successMsg.className = 'fixed top-4 right-4 bg-green-500 text-white px-6 py-3 rounded-lg shadow-lg z-50';
+        successMsg.textContent = '✓ Menu uloženo';
+        document.body.appendChild(successMsg);
+        setTimeout(() => successMsg.remove(), 2000);
+      } else {
+        setError(data.error || 'Chyba při ukládání menu');
+      }
+    } catch (err) {
+      setError('Chyba při ukládání menu');
     }
   };
 
@@ -700,12 +752,64 @@ const LunchOrderApp = () => {
                   <img src={menuImage} alt="Menu" className="w-full rounded-lg shadow-lg mb-4" />
                 )}
                 
-                <div className="space-y-2">
+                <div className="space-y-2 mb-4">
                   {menuItems.map((item, index) => (
-                    <div key={index} className="p-3 bg-gray-50 rounded-lg">
-                      {item.name}
+                    <div key={index} className="flex items-center gap-2 p-3 bg-gray-50 rounded-lg">
+                      <div className="flex flex-col gap-1">
+                        <button
+                          onClick={() => moveItemUp(index)}
+                          disabled={index === 0}
+                          className="p-1 text-gray-500 hover:text-orange-500 hover:bg-orange-50 rounded disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+                          title="Posunout nahoru"
+                        >
+                          <ArrowUp className="w-4 h-4" />
+                        </button>
+                        <button
+                          onClick={() => moveItemDown(index)}
+                          disabled={index === menuItems.length - 1}
+                          className="p-1 text-gray-500 hover:text-orange-500 hover:bg-orange-50 rounded disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+                          title="Posunout dolů"
+                        >
+                          <ArrowDown className="w-4 h-4" />
+                        </button>
+                      </div>
+                      <span className="text-gray-400 text-sm font-mono w-6">{index + 1}.</span>
+                      <input
+                        type="text"
+                        value={item.name}
+                        onChange={(e) => {
+                          const newItems = [...menuItems];
+                          newItems[index].name = e.target.value;
+                          setMenuItems(newItems);
+                        }}
+                        className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:border-orange-500 focus:ring-1 focus:ring-orange-500 outline-none"
+                      />
+                      <button
+                        onClick={() => deleteMenuItem(index)}
+                        className="p-2 text-red-500 hover:bg-red-50 rounded-lg transition-colors"
+                        title="Smazat položku"
+                      >
+                        <Trash2 className="w-5 h-5" />
+                      </button>
                     </div>
                   ))}
+                </div>
+
+                <div className="flex gap-3">
+                  <button
+                    onClick={addNewMenuItem}
+                    className="flex-1 px-4 py-2 border-2 border-dashed border-gray-300 rounded-lg hover:border-orange-500 hover:text-orange-500 transition-colors flex items-center justify-center gap-2"
+                  >
+                    <Plus className="w-4 h-4" />
+                    Přidat položku
+                  </button>
+                  <button
+                    onClick={updateMenuItems}
+                    className="flex-1 px-4 py-2 bg-green-500 hover:bg-green-600 text-white rounded-lg transition-colors flex items-center justify-center gap-2"
+                  >
+                    <CheckCircle className="w-4 h-4" />
+                    Uložit změny
+                  </button>
                 </div>
               </div>
 

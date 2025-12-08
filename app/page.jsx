@@ -32,6 +32,11 @@ const LunchOrderApp = () => {
   const [isLoadingOrders, setIsLoadingOrders] = useState(false);
   const [showOrdersSection, setShowOrdersSection] = useState(true);
 
+  // Drinks state
+  const [drinks, setDrinks] = useState([]);
+  const [isLoadingDrinks, setIsLoadingDrinks] = useState(false);
+  const [showDrinksManager, setShowDrinksManager] = useState(false);
+
   // Check for admin mode from URL
   useEffect(() => {
     const urlParams = new URLSearchParams(window.location.search);
@@ -47,6 +52,7 @@ const LunchOrderApp = () => {
   useEffect(() => {
     loadMenu();
     loadOrders();
+    loadDrinks();
     const interval = setInterval(loadOrders, 30000);
     return () => clearInterval(interval);
   }, []);
@@ -83,6 +89,89 @@ const LunchOrderApp = () => {
     } finally {
       setIsLoadingOrders(false);
     }
+  };
+
+  const loadDrinks = async () => {
+    try {
+      setIsLoadingDrinks(true);
+      const response = await fetch('/api/drinks');
+      const data = await response.json();
+      
+      if (data.drinks) {
+        setDrinks(data.drinks);
+      }
+    } catch (err) {
+      console.error('Error loading drinks:', err);
+    } finally {
+      setIsLoadingDrinks(false);
+    }
+  };
+
+  const saveDrinks = async (updatedDrinks) => {
+    try {
+      const response = await fetch('/api/drinks', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ drinks: updatedDrinks })
+      });
+
+      const data = await response.json();
+      
+      if (data.success) {
+        setDrinks(updatedDrinks);
+        // Show success feedback
+        const successMsg = document.createElement('div');
+        successMsg.className = 'fixed top-4 right-4 bg-green-500 text-white px-6 py-3 rounded-lg shadow-lg z-50';
+        successMsg.textContent = '✓ Nápoje uloženy';
+        document.body.appendChild(successMsg);
+        setTimeout(() => successMsg.remove(), 2000);
+      } else {
+        setError(data.error || 'Chyba při ukládání nápojů');
+      }
+    } catch (err) {
+      setError('Chyba při ukládání nápojů');
+    }
+  };
+
+  const toggleDrinkActive = (id) => {
+    setDrinks(prev => prev.map(drink => 
+      drink.id === id ? { ...drink, active: !drink.active } : drink
+    ));
+  };
+
+  const toggleDrinkSeasonal = (id) => {
+    setDrinks(prev => prev.map(drink => 
+      drink.id === id ? { ...drink, seasonal: !drink.seasonal } : drink
+    ));
+  };
+
+  const updateDrinkName = (id, newName) => {
+    setDrinks(prev => prev.map(drink => 
+      drink.id === id ? { ...drink, name: newName } : drink
+    ));
+  };
+
+  const deleteDrink = (id) => {
+    setDrinks(prev => prev.filter(drink => drink.id !== id));
+  };
+
+  const addNewDrink = () => {
+    const maxId = drinks.reduce((max, d) => Math.max(max, d.id), 0);
+    setDrinks(prev => [...prev, { id: maxId + 1, name: '', active: true, seasonal: false }]);
+  };
+
+  const moveDrinkUp = (index) => {
+    if (index === 0) return;
+    const newDrinks = [...drinks];
+    [newDrinks[index - 1], newDrinks[index]] = [newDrinks[index], newDrinks[index - 1]];
+    setDrinks(newDrinks);
+  };
+
+  const moveDrinkDown = (index) => {
+    if (index === drinks.length - 1) return;
+    const newDrinks = [...drinks];
+    [newDrinks[index], newDrinks[index + 1]] = [newDrinks[index + 1], newDrinks[index]];
+    setDrinks(newDrinks);
   };
 
   const handleAdminLogin = () => {
@@ -122,7 +211,13 @@ const LunchOrderApp = () => {
         if (data.error) {
           setError(data.error);
         } else if (data.menuItems) {
-          setMenuItems(data.menuItems);
+          // Auto-add active drinks after recognized menu items
+          const activeDrinks = drinks.filter(d => d.active).map(d => ({ name: d.name, isDrink: true }));
+          const menuWithDrinks = [
+            ...data.menuItems.map(item => ({ ...item, isDrink: false })),
+            ...activeDrinks
+          ];
+          setMenuItems(menuWithDrinks);
         }
       } catch (err) {
         setError('Chyba při zpracování: ' + err.message);
@@ -813,6 +908,121 @@ const LunchOrderApp = () => {
                 </div>
               </div>
 
+              {/* Drinks Manager Section */}
+              <div className="bg-white rounded-lg shadow-lg p-6">
+                <div className="flex items-center justify-between mb-4">
+                  <h2 className="text-xl font-semibold flex items-center gap-2">
+                    🥤 Správa nápojů
+                  </h2>
+                  <button
+                    onClick={() => setShowDrinksManager(!showDrinksManager)}
+                    className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+                  >
+                    {showDrinksManager ? (
+                      <ChevronUp className="w-5 h-5 text-gray-500" />
+                    ) : (
+                      <ChevronDown className="w-5 h-5 text-gray-500" />
+                    )}
+                  </button>
+                </div>
+
+                {showDrinksManager && (
+                  <div>
+                    <p className="text-sm text-gray-500 mb-4">
+                      Aktivní nápoje se automaticky přidají k menu při rozpoznání. Sezónní označení je pouze pro váš přehled.
+                    </p>
+                    
+                    <div className="space-y-2 mb-4">
+                      {drinks.map((drink, index) => (
+                        <div 
+                          key={drink.id} 
+                          className={`flex items-center gap-2 p-3 rounded-lg transition-colors ${
+                            drink.active ? 'bg-green-50 border border-green-200' : 'bg-gray-100 border border-gray-200'
+                          }`}
+                        >
+                          <div className="flex flex-col gap-1">
+                            <button
+                              onClick={() => moveDrinkUp(index)}
+                              disabled={index === 0}
+                              className="p-1 text-gray-500 hover:text-orange-500 hover:bg-orange-50 rounded disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+                              title="Posunout nahoru"
+                            >
+                              <ArrowUp className="w-4 h-4" />
+                            </button>
+                            <button
+                              onClick={() => moveDrinkDown(index)}
+                              disabled={index === drinks.length - 1}
+                              className="p-1 text-gray-500 hover:text-orange-500 hover:bg-orange-50 rounded disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+                              title="Posunout dolů"
+                            >
+                              <ArrowDown className="w-4 h-4" />
+                            </button>
+                          </div>
+                          
+                          <button
+                            onClick={() => toggleDrinkActive(drink.id)}
+                            className={`w-6 h-6 rounded border-2 flex items-center justify-center transition-colors ${
+                              drink.active
+                                ? 'bg-green-500 border-green-500'
+                                : 'border-gray-300 hover:border-green-400'
+                            }`}
+                            title={drink.active ? 'V nabídce' : 'Mimo nabídku'}
+                          >
+                            {drink.active && <CheckCircle className="w-4 h-4 text-white" />}
+                          </button>
+                          
+                          <input
+                            type="text"
+                            value={drink.name}
+                            onChange={(e) => updateDrinkName(drink.id, e.target.value)}
+                            className={`flex-1 px-3 py-2 border rounded-lg focus:border-orange-500 focus:ring-1 focus:ring-orange-500 outline-none ${
+                              drink.active ? 'border-green-300 bg-white' : 'border-gray-300 bg-gray-50 text-gray-500'
+                            }`}
+                          />
+                          
+                          <label className="flex items-center gap-2 text-sm text-gray-600 cursor-pointer">
+                            <input
+                              type="checkbox"
+                              checked={drink.seasonal}
+                              onChange={() => toggleDrinkSeasonal(drink.id)}
+                              className="w-4 h-4 rounded border-gray-300 text-orange-500 focus:ring-orange-500"
+                            />
+                            <span className={drink.seasonal ? 'text-orange-500' : ''}>
+                              {drink.seasonal ? '☀️ Sezónní' : 'Sezónní'}
+                            </span>
+                          </label>
+                          
+                          <button
+                            onClick={() => deleteDrink(drink.id)}
+                            className="p-2 text-red-500 hover:bg-red-50 rounded-lg transition-colors"
+                            title="Smazat nápoj"
+                          >
+                            <Trash2 className="w-5 h-5" />
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+
+                    <div className="flex gap-3">
+                      <button
+                        onClick={addNewDrink}
+                        className="flex-1 px-4 py-2 border-2 border-dashed border-gray-300 rounded-lg hover:border-orange-500 hover:text-orange-500 transition-colors flex items-center justify-center gap-2"
+                      >
+                        <Plus className="w-4 h-4" />
+                        Přidat nápoj
+                      </button>
+                      <button
+                        onClick={() => saveDrinks(drinks)}
+                        className="flex-1 px-4 py-2 bg-green-500 hover:bg-green-600 text-white rounded-lg transition-colors flex items-center justify-center gap-2"
+                      >
+                        <CheckCircle className="w-4 h-4" />
+                        Uložit nápoje
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </div>
+
               <div className="bg-white rounded-lg shadow-lg p-6">
                 <div className="flex items-center justify-between mb-4">
                   <h2 className="text-xl font-semibold flex items-center gap-2">
@@ -928,9 +1138,9 @@ const LunchOrderApp = () => {
         </div>
 
         <div className="bg-white rounded-lg shadow-lg p-6 mb-6">
-          <h2 className="text-xl font-semibold mb-4">Vyberte si</h2>
+          <h2 className="text-xl font-semibold mb-4">🍽️ Jídla</h2>
           <div className="space-y-4">
-            {menuItems.map((item, index) => {
+            {menuItems.filter(item => !item.isDrink).map((item, index) => {
               const namisteKey = getItemKey(item.name, 'namiste');
               const ssebouKey = getItemKey(item.name, 'ssebou');
               const isNamisteSelected = selectedItems[namisteKey];
@@ -938,7 +1148,7 @@ const LunchOrderApp = () => {
               const isAnySelected = isNamisteSelected || isSsebouSelected;
 
               return (
-                <div key={index} className="border border-gray-200 rounded-lg p-4">
+                <div key={`food-${index}`} className="border border-gray-200 rounded-lg p-4">
                   <div className="flex items-center justify-between mb-3">
                     <h3 className="font-semibold text-lg text-gray-800">{item.name}</h3>
                     <button
@@ -1080,6 +1290,163 @@ const LunchOrderApp = () => {
             })}
           </div>
         </div>
+
+        {/* Drinks Section */}
+        {menuItems.filter(item => item.isDrink).length > 0 && (
+          <div className="bg-white rounded-lg shadow-lg p-6 mb-6">
+            <h2 className="text-xl font-semibold mb-4">🥤 Nápoje</h2>
+            <div className="space-y-4">
+              {menuItems.filter(item => item.isDrink).map((item, index) => {
+                const namisteKey = getItemKey(item.name, 'namiste');
+                const ssebouKey = getItemKey(item.name, 'ssebou');
+                const isNamisteSelected = selectedItems[namisteKey];
+                const isSsebouSelected = selectedItems[ssebouKey];
+                const isAnySelected = isNamisteSelected || isSsebouSelected;
+
+                return (
+                  <div key={`drink-${index}`} className="border border-cyan-200 rounded-lg p-4 bg-cyan-50/30">
+                    <div className="flex items-center justify-between mb-3">
+                      <h3 className="font-semibold text-lg text-gray-800">{item.name}</h3>
+                      <button
+                        onClick={() => toggleItemExpanded(item.name)}
+                        className="p-1 hover:bg-gray-100 rounded transition-colors"
+                      >
+                        {expandedItems[item.name] ? (
+                          <ChevronUp className="w-5 h-5 text-gray-500" />
+                        ) : (
+                          <ChevronDown className="w-5 h-5 text-gray-500" />
+                        )}
+                      </button>
+                    </div>
+
+                    <div className="space-y-3">
+                      <div className={`border-2 rounded-lg p-3 transition-colors ${
+                        isNamisteSelected
+                          ? 'border-green-500 bg-green-50'
+                          : 'border-gray-200 bg-white'
+                      }`}>
+                        <div className="flex items-center justify-between">
+                          <button
+                            onClick={() => toggleItemSelection(item.name, 'namiste')}
+                            className="flex items-center gap-3 flex-1"
+                          >
+                            <div className={`w-6 h-6 rounded border-2 flex items-center justify-center ${
+                              isNamisteSelected
+                                ? 'bg-green-500 border-green-500'
+                                : 'border-gray-300'
+                            }`}>
+                              {isNamisteSelected && (
+                                <CheckCircle className="w-5 h-5 text-white" />
+                              )}
+                            </div>
+                            <span className="font-medium text-gray-700">🍽️ Na místě</span>
+                          </button>
+                          
+                          {isNamisteSelected && (
+                            <div className="flex items-center gap-2 bg-white border-2 border-green-300 rounded-lg px-2">
+                              <button
+                                onClick={() => updateQuantity(item.name, 'namiste', -1)}
+                                className="text-green-600 hover:text-green-700 font-bold text-lg px-2 py-1"
+                              >
+                                −
+                              </button>
+                              <span className="font-bold text-gray-800 min-w-[2ch] text-center">
+                                {quantities[namisteKey] || 1}
+                              </span>
+                              <button
+                                onClick={() => updateQuantity(item.name, 'namiste', 1)}
+                                className="text-green-600 hover:text-green-700 font-bold text-lg px-2 py-1"
+                              >
+                                +
+                              </button>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+
+                      <div className={`border-2 rounded-lg p-3 transition-colors ${
+                        isSsebouSelected
+                          ? 'border-blue-500 bg-blue-50'
+                          : 'border-gray-200 bg-white'
+                      }`}>
+                        <div className="flex items-center justify-between">
+                          <button
+                            onClick={() => toggleItemSelection(item.name, 'ssebou')}
+                            className="flex items-center gap-3 flex-1"
+                          >
+                            <div className={`w-6 h-6 rounded border-2 flex items-center justify-center ${
+                              isSsebouSelected
+                                ? 'bg-blue-500 border-blue-500'
+                                : 'border-gray-300'
+                            }`}>
+                              {isSsebouSelected && (
+                                <CheckCircle className="w-5 h-5 text-white" />
+                              )}
+                            </div>
+                            <span className="font-medium text-gray-700">🥡 S sebou</span>
+                          </button>
+                          
+                          {isSsebouSelected && (
+                            <div className="flex items-center gap-2 bg-white border-2 border-blue-300 rounded-lg px-2">
+                              <button
+                                onClick={() => updateQuantity(item.name, 'ssebou', -1)}
+                                className="text-blue-600 hover:text-blue-700 font-bold text-lg px-2 py-1"
+                              >
+                                −
+                              </button>
+                              <span className="font-bold text-gray-800 min-w-[2ch] text-center">
+                                {quantities[ssebouKey] || 1}
+                              </span>
+                              <button
+                                onClick={() => updateQuantity(item.name, 'ssebou', 1)}
+                                className="text-blue-600 hover:text-blue-700 font-bold text-lg px-2 py-1"
+                              >
+                                +
+                              </button>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+
+                      {isAnySelected && (
+                        <div className="pt-3 border-t border-gray-200 space-y-2">
+                          {isNamisteSelected && (
+                            <div>
+                              <label className="block text-xs font-medium text-gray-600 mb-1">
+                                Poznámka k "Na místě"
+                              </label>
+                              <input
+                                type="text"
+                                value={notes[namisteKey] || ''}
+                                onChange={(e) => setNotes({ ...notes, [namisteKey]: e.target.value })}
+                                placeholder="např. bez ledu..."
+                                className="w-full border border-gray-300 rounded px-3 py-2 text-sm"
+                              />
+                            </div>
+                          )}
+                          {isSsebouSelected && (
+                            <div>
+                              <label className="block text-xs font-medium text-gray-600 mb-1">
+                                Poznámka k "S sebou"
+                              </label>
+                              <input
+                                type="text"
+                                value={notes[ssebouKey] || ''}
+                                onChange={(e) => setNotes({ ...notes, [ssebouKey]: e.target.value })}
+                                placeholder="např. bez ledu..."
+                                className="w-full border border-gray-300 rounded px-3 py-2 text-sm"
+                              />
+                            </div>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
 
         <div className="bg-white rounded-lg shadow-lg p-6 mb-6">
           <div className="flex items-center justify-between mb-4">

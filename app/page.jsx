@@ -211,13 +211,8 @@ const LunchOrderApp = () => {
         if (data.error) {
           setError(data.error);
         } else if (data.menuItems) {
-          // Auto-add active drinks after recognized menu items
-          const activeDrinks = (drinks || []).filter(d => d && d.active).map(d => ({ name: d.name, isDrink: true }));
-          const menuWithDrinks = [
-            ...data.menuItems.map(item => ({ ...item, isDrink: false })),
-            ...activeDrinks
-          ];
-          setMenuItems(menuWithDrinks);
+          // Only set food items, drinks are loaded separately from drinks state
+          setMenuItems(data.menuItems.map(item => ({ ...item, isDrink: false })));
         }
       } catch (err) {
         setError('Chyba při zpracování: ' + err.message);
@@ -1293,27 +1288,27 @@ const LunchOrderApp = () => {
           </div>
         </div>
 
-        {/* Drinks Section */}
-        {menuItems.filter(item => item && item.isDrink).length > 0 && (
+        {/* Drinks Section - using drinks state directly */}
+        {drinks.filter(d => d && d.active).length > 0 && (
           <div className="bg-white rounded-lg shadow-lg p-6 mb-6">
             <h2 className="text-xl font-semibold mb-4">🥤 Nápoje</h2>
             <div className="space-y-4">
-              {menuItems.filter(item => item && item.isDrink).map((item, index) => {
-                const namisteKey = getItemKey(item.name, 'namiste');
-                const ssebouKey = getItemKey(item.name, 'ssebou');
+              {drinks.filter(d => d && d.active).map((drink, index) => {
+                const namisteKey = getItemKey(drink.name, 'namiste');
+                const ssebouKey = getItemKey(drink.name, 'ssebou');
                 const isNamisteSelected = selectedItems[namisteKey];
                 const isSsebouSelected = selectedItems[ssebouKey];
                 const isAnySelected = isNamisteSelected || isSsebouSelected;
 
                 return (
-                  <div key={`drink-${index}`} className="border border-cyan-200 rounded-lg p-4 bg-cyan-50/30">
+                  <div key={`drink-${drink.id || index}`} className="border border-cyan-200 rounded-lg p-4 bg-cyan-50/30">
                     <div className="flex items-center justify-between mb-3">
-                      <h3 className="font-semibold text-lg text-gray-800">{item.name}</h3>
+                      <h3 className="font-semibold text-lg text-gray-800">{drink.name}</h3>
                       <button
-                        onClick={() => toggleItemExpanded(item.name)}
+                        onClick={() => toggleItemExpanded(drink.name)}
                         className="p-1 hover:bg-gray-100 rounded transition-colors"
                       >
-                        {expandedItems[item.name] ? (
+                        {expandedItems[drink.name] ? (
                           <ChevronUp className="w-5 h-5 text-gray-500" />
                         ) : (
                           <ChevronDown className="w-5 h-5 text-gray-500" />
@@ -1329,7 +1324,7 @@ const LunchOrderApp = () => {
                       }`}>
                         <div className="flex items-center justify-between">
                           <button
-                            onClick={() => toggleItemSelection(item.name, 'namiste')}
+                            onClick={() => toggleItemSelection(drink.name, 'namiste')}
                             className="flex items-center gap-3 flex-1"
                           >
                             <div className={`w-6 h-6 rounded border-2 flex items-center justify-center ${
@@ -1347,7 +1342,7 @@ const LunchOrderApp = () => {
                           {isNamisteSelected && (
                             <div className="flex items-center gap-2 bg-white border-2 border-green-300 rounded-lg px-2">
                               <button
-                                onClick={() => updateQuantity(item.name, 'namiste', -1)}
+                                onClick={() => updateQuantity(drink.name, 'namiste', -1)}
                                 className="text-green-600 hover:text-green-700 font-bold text-lg px-2 py-1"
                               >
                                 −
@@ -1356,7 +1351,7 @@ const LunchOrderApp = () => {
                                 {quantities[namisteKey] || 1}
                               </span>
                               <button
-                                onClick={() => updateQuantity(item.name, 'namiste', 1)}
+                                onClick={() => updateQuantity(drink.name, 'namiste', 1)}
                                 className="text-green-600 hover:text-green-700 font-bold text-lg px-2 py-1"
                               >
                                 +
@@ -1373,7 +1368,7 @@ const LunchOrderApp = () => {
                       }`}>
                         <div className="flex items-center justify-between">
                           <button
-                            onClick={() => toggleItemSelection(item.name, 'ssebou')}
+                            onClick={() => toggleItemSelection(drink.name, 'ssebou')}
                             className="flex items-center gap-3 flex-1"
                           >
                             <div className={`w-6 h-6 rounded border-2 flex items-center justify-center ${
@@ -1391,7 +1386,7 @@ const LunchOrderApp = () => {
                           {isSsebouSelected && (
                             <div className="flex items-center gap-2 bg-white border-2 border-blue-300 rounded-lg px-2">
                               <button
-                                onClick={() => updateQuantity(item.name, 'ssebou', -1)}
+                                onClick={() => updateQuantity(drink.name, 'ssebou', -1)}
                                 className="text-blue-600 hover:text-blue-700 font-bold text-lg px-2 py-1"
                               >
                                 −
@@ -1400,7 +1395,7 @@ const LunchOrderApp = () => {
                                 {quantities[ssebouKey] || 1}
                               </span>
                               <button
-                                onClick={() => updateQuantity(item.name, 'ssebou', 1)}
+                                onClick={() => updateQuantity(drink.name, 'ssebou', 1)}
                                 className="text-blue-600 hover:text-blue-700 font-bold text-lg px-2 py-1"
                               >
                                 +

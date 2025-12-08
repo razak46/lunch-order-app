@@ -233,7 +233,9 @@ const LunchOrderApp = () => {
         items: Object.entries(selectedItems)
           .filter(([_, selected]) => selected)
           .map(([key]) => {
-            const [itemName, type] = key.split('-');
+            const lastDashIndex = key.lastIndexOf('-');
+            const itemName = key.substring(0, lastDashIndex);
+            const type = key.substring(lastDashIndex + 1);
             return {
               name: itemName,
               quantity: quantities[key] || 1,
@@ -371,7 +373,9 @@ const LunchOrderApp = () => {
     const selectedItemsList = Object.entries(selectedItems)
       .filter(([_, selected]) => selected)
       .map(([key]) => {
-        const [itemName, type] = key.split('-');
+        const lastDashIndex = key.lastIndexOf('-');
+        const itemName = key.substring(0, lastDashIndex);
+        const type = key.substring(lastDashIndex + 1);
         return {
           name: itemName,
           quantity: quantities[key] || 1,

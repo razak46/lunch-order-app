@@ -1288,156 +1288,69 @@ const LunchOrderApp = () => {
           </div>
         </div>
 
-        {/* Drinks Section - using drinks state directly */}
+        {/* Drinks Section - using drinks state directly, only "na místě" option */}
         {drinks.filter(d => d && d.active).length > 0 && (
           <div className="bg-white rounded-lg shadow-lg p-6 mb-6">
             <h2 className="text-xl font-semibold mb-4">🥤 Nápoje</h2>
             <div className="space-y-4">
               {drinks.filter(d => d && d.active).map((drink, index) => {
                 const namisteKey = getItemKey(drink.name, 'namiste');
-                const ssebouKey = getItemKey(drink.name, 'ssebou');
                 const isNamisteSelected = selectedItems[namisteKey];
-                const isSsebouSelected = selectedItems[ssebouKey];
-                const isAnySelected = isNamisteSelected || isSsebouSelected;
 
                 return (
                   <div key={`drink-${drink.id || index}`} className="border border-cyan-200 rounded-lg p-4 bg-cyan-50/30">
-                    <div className="flex items-center justify-between mb-3">
-                      <h3 className="font-semibold text-lg text-gray-800">{drink.name}</h3>
+                    <div className="flex items-center justify-between">
                       <button
-                        onClick={() => toggleItemExpanded(drink.name)}
-                        className="p-1 hover:bg-gray-100 rounded transition-colors"
+                        onClick={() => toggleItemSelection(drink.name, 'namiste')}
+                        className="flex items-center gap-3 flex-1"
                       >
-                        {expandedItems[drink.name] ? (
-                          <ChevronUp className="w-5 h-5 text-gray-500" />
-                        ) : (
-                          <ChevronDown className="w-5 h-5 text-gray-500" />
-                        )}
+                        <div className={`w-6 h-6 rounded border-2 flex items-center justify-center ${
+                          isNamisteSelected
+                            ? 'bg-green-500 border-green-500'
+                            : 'border-gray-300'
+                        }`}>
+                          {isNamisteSelected && (
+                            <CheckCircle className="w-5 h-5 text-white" />
+                          )}
+                        </div>
+                        <span className="font-semibold text-lg text-gray-800">{drink.name}</span>
                       </button>
-                    </div>
-
-                    <div className="space-y-3">
-                      <div className={`border-2 rounded-lg p-3 transition-colors ${
-                        isNamisteSelected
-                          ? 'border-green-500 bg-green-50'
-                          : 'border-gray-200 bg-white'
-                      }`}>
-                        <div className="flex items-center justify-between">
+                      
+                      {isNamisteSelected && (
+                        <div className="flex items-center gap-2 bg-white border-2 border-green-300 rounded-lg px-2">
                           <button
-                            onClick={() => toggleItemSelection(drink.name, 'namiste')}
-                            className="flex items-center gap-3 flex-1"
+                            onClick={() => updateQuantity(drink.name, 'namiste', -1)}
+                            className="text-green-600 hover:text-green-700 font-bold text-lg px-2 py-1"
                           >
-                            <div className={`w-6 h-6 rounded border-2 flex items-center justify-center ${
-                              isNamisteSelected
-                                ? 'bg-green-500 border-green-500'
-                                : 'border-gray-300'
-                            }`}>
-                              {isNamisteSelected && (
-                                <CheckCircle className="w-5 h-5 text-white" />
-                              )}
-                            </div>
-                            <span className="font-medium text-gray-700">🍽️ Na místě</span>
+                            −
                           </button>
-                          
-                          {isNamisteSelected && (
-                            <div className="flex items-center gap-2 bg-white border-2 border-green-300 rounded-lg px-2">
-                              <button
-                                onClick={() => updateQuantity(drink.name, 'namiste', -1)}
-                                className="text-green-600 hover:text-green-700 font-bold text-lg px-2 py-1"
-                              >
-                                −
-                              </button>
-                              <span className="font-bold text-gray-800 min-w-[2ch] text-center">
-                                {quantities[namisteKey] || 1}
-                              </span>
-                              <button
-                                onClick={() => updateQuantity(drink.name, 'namiste', 1)}
-                                className="text-green-600 hover:text-green-700 font-bold text-lg px-2 py-1"
-                              >
-                                +
-                              </button>
-                            </div>
-                          )}
-                        </div>
-                      </div>
-
-                      <div className={`border-2 rounded-lg p-3 transition-colors ${
-                        isSsebouSelected
-                          ? 'border-blue-500 bg-blue-50'
-                          : 'border-gray-200 bg-white'
-                      }`}>
-                        <div className="flex items-center justify-between">
+                          <span className="font-bold text-gray-800 min-w-[2ch] text-center">
+                            {quantities[namisteKey] || 1}
+                          </span>
                           <button
-                            onClick={() => toggleItemSelection(drink.name, 'ssebou')}
-                            className="flex items-center gap-3 flex-1"
+                            onClick={() => updateQuantity(drink.name, 'namiste', 1)}
+                            className="text-green-600 hover:text-green-700 font-bold text-lg px-2 py-1"
                           >
-                            <div className={`w-6 h-6 rounded border-2 flex items-center justify-center ${
-                              isSsebouSelected
-                                ? 'bg-blue-500 border-blue-500'
-                                : 'border-gray-300'
-                            }`}>
-                              {isSsebouSelected && (
-                                <CheckCircle className="w-5 h-5 text-white" />
-                              )}
-                            </div>
-                            <span className="font-medium text-gray-700">🥡 S sebou</span>
+                            +
                           </button>
-                          
-                          {isSsebouSelected && (
-                            <div className="flex items-center gap-2 bg-white border-2 border-blue-300 rounded-lg px-2">
-                              <button
-                                onClick={() => updateQuantity(drink.name, 'ssebou', -1)}
-                                className="text-blue-600 hover:text-blue-700 font-bold text-lg px-2 py-1"
-                              >
-                                −
-                              </button>
-                              <span className="font-bold text-gray-800 min-w-[2ch] text-center">
-                                {quantities[ssebouKey] || 1}
-                              </span>
-                              <button
-                                onClick={() => updateQuantity(drink.name, 'ssebou', 1)}
-                                className="text-blue-600 hover:text-blue-700 font-bold text-lg px-2 py-1"
-                              >
-                                +
-                              </button>
-                            </div>
-                          )}
-                        </div>
-                      </div>
-
-                      {isAnySelected && (
-                        <div className="pt-3 border-t border-gray-200 space-y-2">
-                          {isNamisteSelected && (
-                            <div>
-                              <label className="block text-xs font-medium text-gray-600 mb-1">
-                                Poznámka k "Na místě"
-                              </label>
-                              <input
-                                type="text"
-                                value={notes[namisteKey] || ''}
-                                onChange={(e) => setNotes({ ...notes, [namisteKey]: e.target.value })}
-                                placeholder="např. bez ledu..."
-                                className="w-full border border-gray-300 rounded px-3 py-2 text-sm"
-                              />
-                            </div>
-                          )}
-                          {isSsebouSelected && (
-                            <div>
-                              <label className="block text-xs font-medium text-gray-600 mb-1">
-                                Poznámka k "S sebou"
-                              </label>
-                              <input
-                                type="text"
-                                value={notes[ssebouKey] || ''}
-                                onChange={(e) => setNotes({ ...notes, [ssebouKey]: e.target.value })}
-                                placeholder="např. bez ledu..."
-                                className="w-full border border-gray-300 rounded px-3 py-2 text-sm"
-                              />
-                            </div>
-                          )}
                         </div>
                       )}
                     </div>
+
+                    {isNamisteSelected && (
+                      <div className="mt-3 pt-3 border-t border-gray-200">
+                        <label className="block text-xs font-medium text-gray-600 mb-1">
+                          Poznámka
+                        </label>
+                        <input
+                          type="text"
+                          value={notes[namisteKey] || ''}
+                          onChange={(e) => setNotes({ ...notes, [namisteKey]: e.target.value })}
+                          placeholder="např. bez ledu..."
+                          className="w-full border border-gray-300 rounded px-3 py-2 text-sm"
+                        />
+                      </div>
+                    )}
                   </div>
                 );
               })}

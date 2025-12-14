@@ -1,6 +1,6 @@
 'use client';
 import React, { useState, useEffect } from 'react';
-import { Camera, CheckCircle, AlertCircle, Loader2, Trash2, MessageSquare, ChevronDown, ChevronUp, Download, Lock, Unlock, Info, Users, ShoppingBag, X, Eye, Plus, Minus, ArrowUp, ArrowDown } from 'lucide-react';
+import { Camera, CheckCircle, AlertCircle, Loader2, Trash2, MessageSquare, ChevronDown, ChevronUp, Download, Lock, Unlock, Info, Users, ShoppingBag, X, Eye, Plus, Minus, ArrowUp, ArrowDown, Edit2, Save } from 'lucide-react';
 
 const LunchOrderApp = () => {
   // Admin state
@@ -31,6 +31,10 @@ const LunchOrderApp = () => {
   const [allOrders, setAllOrders] = useState([]);
   const [isLoadingOrders, setIsLoadingOrders] = useState(false);
   const [showOrdersSection, setShowOrdersSection] = useState(true);
+
+  // Order editing state (admin)
+  const [editingOrder, setEditingOrder] = useState(null);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(null);
 
   // Drinks state
   const [drinks, setDrinks] = useState([]);
@@ -172,6 +176,83 @@ const LunchOrderApp = () => {
     const newDrinks = [...drinks];
     [newDrinks[index], newDrinks[index + 1]] = [newDrinks[index + 1], newDrinks[index]];
     setDrinks(newDrinks);
+  };
+
+  // Order management functions (admin)
+  const deleteOrder = async (orderId) => {
+    try {
+      const response = await fetch('/api/orders', {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id: orderId })
+      });
+
+      const data = await response.json();
+      
+      if (data.success) {
+        setAllOrders(prev => prev.filter(o => o.id !== orderId));
+        setShowDeleteConfirm(null);
+        // Show success feedback
+        const successMsg = document.createElement('div');
+        successMsg.className = 'fixed top-4 right-4 bg-green-500 text-white px-6 py-3 rounded-lg shadow-lg z-50';
+        successMsg.textContent = '✓ Objednávka smazána';
+        document.body.appendChild(successMsg);
+        setTimeout(() => successMsg.remove(), 2000);
+      } else {
+        setError(data.error || 'Chyba při mazání objednávky');
+      }
+    } catch (err) {
+      setError('Chyba při mazání objednávky');
+    }
+  };
+
+  const updateOrder = async (updatedOrder) => {
+    try {
+      const response = await fetch('/api/orders', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(updatedOrder)
+      });
+
+      const data = await response.json();
+      
+      if (data.success) {
+        setAllOrders(prev => prev.map(o => o.id === updatedOrder.id ? updatedOrder : o));
+        setEditingOrder(null);
+        // Show success feedback
+        const successMsg = document.createElement('div');
+        successMsg.className = 'fixed top-4 right-4 bg-green-500 text-white px-6 py-3 rounded-lg shadow-lg z-50';
+        successMsg.textContent = '✓ Objednávka upravena';
+        document.body.appendChild(successMsg);
+        setTimeout(() => successMsg.remove(), 2000);
+      } else {
+        setError(data.error || 'Chyba při úpravě objednávky');
+      }
+    } catch (err) {
+      setError('Chyba při úpravě objednávky');
+    }
+  };
+
+  const startEditingOrder = (order) => {
+    // Deep copy the order for editing
+    setEditingOrder(JSON.parse(JSON.stringify(order)));
+  };
+
+  const updateEditingOrderItem = (itemIndex, field, value) => {
+    setEditingOrder(prev => {
+      const updated = { ...prev };
+      updated.items = [...prev.items];
+      updated.items[itemIndex] = { ...updated.items[itemIndex], [field]: value };
+      return updated;
+    });
+  };
+
+  const removeEditingOrderItem = (itemIndex) => {
+    setEditingOrder(prev => {
+      const updated = { ...prev };
+      updated.items = prev.items.filter((_, i) => i !== itemIndex);
+      return updated;
+    });
   };
 
   const handleAdminLogin = () => {
@@ -1026,17 +1107,179 @@ const LunchOrderApp = () => {
                     <Users className="w-6 h-6 text-orange-500" />
                     Objednávky ({allOrders.length})
                   </h2>
-                  <button
-                    onClick={exportOrders}
-                    disabled={allOrders.length === 0}
-                    className="px-4 py-2 bg-orange-500 hover:bg-orange-600 text-white rounded-lg transition-colors flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
-                  >
-                    <Download className="w-4 h-4" />
-                    Export
-                  </button>
+                  <div className="flex gap-2">
+                    <button
+                      onClick={loadOrders}
+                      className="px-3 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg transition-colors flex items-center gap-2"
+                    >
+                      <Loader2 className="w-4 h-4" />
+                      Obnovit
+                    </button>
+                    <button
+                      onClick={exportOrders}
+                      disabled={allOrders.length === 0}
+                      className="px-4 py-2 bg-orange-500 hover:bg-orange-600 text-white rounded-lg transition-colors flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      <Download className="w-4 h-4" />
+                      Export
+                    </button>
+                  </div>
                 </div>
 
-                <OrdersDisplay />
+                {allOrders.length === 0 ? (
+                  <div className="text-center py-8 text-gray-500">
+                    <ShoppingBag className="w-12 h-12 mx-auto mb-3 opacity-50" />
+                    <p>Zatím žádné objednávky</p>
+                  </div>
+                ) : (
+                  <div className="space-y-4">
+                    {allOrders.map((order, orderIndex) => (
+                      <div key={order.id || orderIndex} className="border border-gray-200 rounded-lg p-4">
+                        {editingOrder && editingOrder.id === order.id ? (
+                          // Editing mode
+                          <div>
+                            <div className="flex items-center justify-between mb-3">
+                              <div className="flex items-center gap-2">
+                                <label className="text-sm font-medium text-gray-600">Jméno:</label>
+                                <input
+                                  type="text"
+                                  value={editingOrder.userName}
+                                  onChange={(e) => setEditingOrder(prev => ({ ...prev, userName: e.target.value }))}
+                                  className="px-3 py-1 border border-gray-300 rounded-lg focus:border-orange-500 focus:ring-1 focus:ring-orange-500 outline-none"
+                                />
+                              </div>
+                              <div className="flex gap-2">
+                                <button
+                                  onClick={() => updateOrder(editingOrder)}
+                                  className="px-3 py-1 bg-green-500 hover:bg-green-600 text-white rounded-lg transition-colors flex items-center gap-1 text-sm"
+                                >
+                                  <Save className="w-4 h-4" />
+                                  Uložit
+                                </button>
+                                <button
+                                  onClick={() => setEditingOrder(null)}
+                                  className="px-3 py-1 bg-gray-300 hover:bg-gray-400 text-gray-700 rounded-lg transition-colors text-sm"
+                                >
+                                  Zrušit
+                                </button>
+                              </div>
+                            </div>
+                            
+                            <div className="space-y-2">
+                              {editingOrder.items && editingOrder.items.map((item, itemIndex) => (
+                                <div key={itemIndex} className="flex items-center gap-2 p-2 bg-gray-50 rounded-lg">
+                                  <input
+                                    type="text"
+                                    value={item.name}
+                                    onChange={(e) => updateEditingOrderItem(itemIndex, 'name', e.target.value)}
+                                    className="flex-1 px-2 py-1 border border-gray-300 rounded text-sm"
+                                    placeholder="Název položky"
+                                  />
+                                  <select
+                                    value={item.type}
+                                    onChange={(e) => updateEditingOrderItem(itemIndex, 'type', e.target.value)}
+                                    className="px-2 py-1 border border-gray-300 rounded text-sm"
+                                  >
+                                    <option value="namiste">Na místě</option>
+                                    <option value="ssebou">S sebou</option>
+                                  </select>
+                                  <input
+                                    type="number"
+                                    value={item.quantity}
+                                    onChange={(e) => updateEditingOrderItem(itemIndex, 'quantity', parseInt(e.target.value) || 1)}
+                                    className="w-16 px-2 py-1 border border-gray-300 rounded text-sm text-center"
+                                    min="1"
+                                  />
+                                  <input
+                                    type="text"
+                                    value={item.note || ''}
+                                    onChange={(e) => updateEditingOrderItem(itemIndex, 'note', e.target.value)}
+                                    className="w-32 px-2 py-1 border border-gray-300 rounded text-sm"
+                                    placeholder="Poznámka"
+                                  />
+                                  <button
+                                    onClick={() => removeEditingOrderItem(itemIndex)}
+                                    className="p-1 text-red-500 hover:bg-red-50 rounded"
+                                  >
+                                    <Trash2 className="w-4 h-4" />
+                                  </button>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        ) : (
+                          // View mode
+                          <div>
+                            <div className="flex items-center justify-between mb-2">
+                              <div className="flex items-center gap-3">
+                                <span className="font-semibold text-gray-800">{order.userName}</span>
+                                <span className="text-xs text-gray-400">
+                                  {order.timestamp && new Date(order.timestamp).toLocaleString('cs-CZ')}
+                                </span>
+                              </div>
+                              <div className="flex gap-2">
+                                <button
+                                  onClick={() => startEditingOrder(order)}
+                                  className="p-2 text-blue-500 hover:bg-blue-50 rounded-lg transition-colors"
+                                  title="Upravit objednávku"
+                                >
+                                  <Edit2 className="w-4 h-4" />
+                                </button>
+                                <button
+                                  onClick={() => setShowDeleteConfirm(order.id)}
+                                  className="p-2 text-red-500 hover:bg-red-50 rounded-lg transition-colors"
+                                  title="Smazat objednávku"
+                                >
+                                  <Trash2 className="w-4 h-4" />
+                                </button>
+                              </div>
+                            </div>
+                            
+                            {/* Delete confirmation */}
+                            {showDeleteConfirm === order.id && (
+                              <div className="mb-3 p-3 bg-red-50 border border-red-200 rounded-lg">
+                                <p className="text-sm text-red-800 mb-2">Opravdu smazat tuto objednávku?</p>
+                                <div className="flex gap-2">
+                                  <button
+                                    onClick={() => deleteOrder(order.id)}
+                                    className="px-3 py-1 bg-red-500 hover:bg-red-600 text-white rounded text-sm"
+                                  >
+                                    Ano, smazat
+                                  </button>
+                                  <button
+                                    onClick={() => setShowDeleteConfirm(null)}
+                                    className="px-3 py-1 bg-gray-300 hover:bg-gray-400 text-gray-700 rounded text-sm"
+                                  >
+                                    Zrušit
+                                  </button>
+                                </div>
+                              </div>
+                            )}
+                            
+                            <div className="space-y-1">
+                              {order.items && order.items.map((item, itemIndex) => (
+                                <div key={itemIndex} className="flex items-center gap-2 text-sm">
+                                  <span className={`px-2 py-0.5 rounded text-xs font-medium ${
+                                    item.type === 'namiste' 
+                                      ? 'bg-green-100 text-green-700' 
+                                      : 'bg-blue-100 text-blue-700'
+                                  }`}>
+                                    {item.type === 'namiste' ? '🍽️' : '🥡'}
+                                  </span>
+                                  <span className="text-gray-700">{item.name}</span>
+                                  <span className="font-semibold">{item.quantity}×</span>
+                                  {item.note && (
+                                    <span className="text-gray-500 text-xs">({item.note})</span>
+                                  )}
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
             </div>
           )}

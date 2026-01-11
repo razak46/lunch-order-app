@@ -47,13 +47,14 @@ export async function GET() {
 export async function POST(request) {
   try {
     const body = await request.json();
-    const { action, image, menu, menuItems } = body;
+    const { action, image, menu, menuItems, mediaType } = body;
 
     if (action === 'analyze') {
       // AI analysis of menu image
       console.log('=== ANALYZE ACTION START ===');
       console.log('API Key present:', !!process.env.ANTHROPIC_API_KEY);
       console.log('Image data length:', image?.length);
+      console.log('Media type:', mediaType);
       
       if (!process.env.ANTHROPIC_API_KEY) {
         console.error('Missing Anthropic API key');
@@ -71,6 +72,10 @@ export async function POST(request) {
         );
       }
 
+      // Use provided mediaType or default to image/jpeg
+      const finalMediaType = mediaType || 'image/jpeg';
+      console.log('Using media type:', finalMediaType);
+
       try {
         console.log('Calling Anthropic API...');
         const message = await anthropic.messages.create({
@@ -84,7 +89,7 @@ export async function POST(request) {
                   type: 'image',
                   source: {
                     type: 'base64',
-                    media_type: 'image/jpeg',
+                    media_type: finalMediaType,
                     data: image,
                   },
                 },

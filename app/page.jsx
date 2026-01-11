@@ -277,12 +277,17 @@ const LunchOrderApp = () => {
       setIsProcessing(true);
       setError('');
 
+      // Detect media type from base64 string (e.g., data:image/png;base64,...)
+      const mediaTypeMatch = base64Image.match(/^data:(image\/[^;]+);base64,/);
+      const mediaType = mediaTypeMatch ? mediaTypeMatch[1] : 'image/jpeg';
+
       try {
         const response = await fetch('/api/menu', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ 
             image: base64Image.split(',')[1],
+            mediaType: mediaType,
             action: 'analyze'
           })
         });
